@@ -77,3 +77,11 @@ All prefixed with `ATDATA_` (via pydantic-settings). Key ones:
 ## Testing
 
 Tests run without a database. External dependencies (DB pool, upsert functions) are mocked with `unittest.mock.AsyncMock`. The `conftest.py` fixture provides a dev-mode `AppConfig`. Identity/DID tests use httpx `ASGITransport` to test endpoints in-process.
+
+## Repo Tooling
+
+The `.claude/` and `.chainlink/` directories are committed to the repo:
+
+- `.claude/settings.json` — Claude Code hooks (prompt guard, edit checks, session management)
+- `.claude/hooks/` — Hook scripts that enforce workflow rules
+- `.chainlink/` — Local issue tracker database and behavioral rules

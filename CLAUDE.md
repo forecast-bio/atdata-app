@@ -80,8 +80,9 @@ Tests run without a database. External dependencies (DB pool, upsert functions) 
 
 ## Repo Tooling
 
-The `.claude/` and `.chainlink/` directories are committed to the repo:
+The `.claude/`, `.chainlink/`, and `.vscode/` directories are committed to the repo:
 
 - `.claude/settings.json` — Claude Code hooks (prompt guard, edit checks, session management)
 - `.claude/hooks/` — Hook scripts that enforce workflow rules
 - `.chainlink/` — Local issue tracker database and behavioral rules
+- `.vscode/settings.json` — Shared editor settings (spell check dictionary)

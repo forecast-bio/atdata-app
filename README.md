@@ -71,76 +71,51 @@ The DID document is served at `GET /.well-known/did.json` and advertises the ser
 
 ## API Reference
 
-All XRPC endpoints are mounted at `/xrpc/`. Queries are `GET`, procedures are `POST`.
-
-### Queries
-
-| Endpoint | Parameters | Description |
-|---|---|---|
-| `resolveLabel` | `handle`, `name`, `version?` | Resolve a named label to its dataset URI |
-| `resolveSchema` | `handle`, `schemaId`, `version?` | Resolve a schema by ID, optionally pinned to a version |
-| `resolveBlobs` | `uris` (max 25) | Resolve blob storage URIs to downloadable PDS blob URLs |
-| `getEntry` | `uri` | Get a single dataset entry by AT-URI |
-| `getEntries` | `uris` (max 25) | Batch-get multiple dataset entries |
-| `getSchema` | `uri` | Get a single schema by AT-URI |
-| `listEntries` | `repo?`, `limit?`, `cursor?` | Paginated list of dataset entries |
-| `listSchemas` | `repo?`, `limit?`, `cursor?` | Paginated list of schemas |
-| `listLenses` | `repo?`, `sourceSchema?`, `targetSchema?`, `limit?`, `cursor?` | Paginated list of lenses, filterable by schema |
-| `searchDatasets` | `q`, `tags?`, `schemaRef?`, `repo?`, `limit?`, `cursor?` | Full-text search over dataset entries |
-| `searchLenses` | `sourceSchema?`, `targetSchema?`, `limit?`, `cursor?` | Search lenses by source/target schema |
-| `describeService` | — | Service DID, available collections, and record counts |
-
-All `handle` parameters accept either a handle (e.g., `alice.bsky.social`) or a DID (e.g., `did:plc:abc123`). Paginated endpoints support keyset cursor pagination.
-
-### Procedures
-
-Procedures require two auth headers:
-- `Authorization: Bearer <service-auth-jwt>` — ATProto service auth JWT, verified against the caller's signing key
-- `X-PDS-Auth: <pds-access-token>` — PDS access token for proxying `createRecord` to the caller's PDS
-
-| Endpoint | Body | Description |
-|---|---|---|
-| `publishSchema` | `{record, rkey?}` | Validate and publish a schema record |
-| `publishDataset` | `{record, rkey?}` | Validate schema reference and storage type, then publish a dataset entry |
-| `publishLabel` | `{record, rkey?}` | Validate dataset reference, then publish a label |
-| `publishLens` | `{record, rkey?}` | Validate both schema references, then publish a lens |
-
-Each procedure validates referential integrity (e.g., a dataset's `schemaRef` must point to an existing schema), sets the `$type` field, then proxies `com.atproto.repo.createRecord` to the caller's PDS. The record is then picked up by the firehose and indexed.
-
-### Other Routes
-
-| Route | Description |
-|---|---|
-| `GET /.well-known/did.json` | DID document for `did:web` identity |
-| `GET /health` | Health check (`{"status": "ok"}`) |
+See [docs/api-reference.md](docs/api-reference.md) for the full XRPC endpoint reference (queries, procedures, and other routes).
 
 ## Data Model
 
-Four tables indexed from the `ac.foundation.dataset.*` namespace, plus cursor state for firehose crash recovery. All tables use `(did, rkey)` as composite primary key. Schema auto-applies on startup.
+See [docs/data-model.md](docs/data-model.md) for the database schema (schemas, entries, labels, lenses).
 
-### schemas
+## Docker Deployment
 
-Stores dataset schema definitions. Record key format: `{schema-id}@{semver}` (e.g., `my.schema@1.0.0`).
+The app ships with a multi-stage Dockerfile using [uv](https://docs.astral.sh/uv/) for fast dependency installation.
 
-Fields: `name`, `version`, `schema_type` (default `jsonSchema`), `schema_body` (JSONB), `description`, `metadata` (JSONB).
+### Build and run locally
 
-### entries
+```bash
+docker build -t atdata-app .
 
-Stores dataset metadata records. Includes weighted full-text search (`search_tsv`) across name (A), description (B), and tags (C).
+docker run -p 8000:8000 \
+  -e ATDATA_DATABASE_URL=postgresql://user:pass@host:5432/atdata_app \
+  -e ATDATA_HOSTNAME=localhost \
+  -e ATDATA_DEV_MODE=true \
+  atdata-app
+```
 
-Fields: `name`, `schema_ref` (AT-URI to schema), `storage` (JSONB — `storageHttp`, `storageS3`, or `storageBlobs`), `description`, `tags` (text array), `license`, `size_samples`, `size_bytes`, `size_shards`, `content_metadata` (JSONB).
+### Deploy on Railway
 
-### labels
+The repo includes a `railway.toml` that configures the Dockerfile builder, health checks at `/health`, and a restart-on-failure policy.
 
-Named version pointers to dataset entries (analogous to git tags).
+1. Connect the repo to a [Railway](https://railway.com) project
+2. Add a PostgreSQL service and link it
+3. Set the required environment variables:
 
-Fields: `name`, `dataset_uri` (AT-URI to entry), `version`, `description`.
+| Variable | Value |
+|---|---|
+| `ATDATA_DATABASE_URL` | Provided by Railway's PostgreSQL plugin (`${{Postgres.DATABASE_URL}}`) |
+| `ATDATA_HOSTNAME` | Your Railway public domain (e.g. `atdata-app-production.up.railway.app`) |
+| `ATDATA_DEV_MODE` | `false` |
+| `ATDATA_PORT` | Omit — Railway sets `PORT` automatically and the container respects it |
 
-### lenses
+Optional variables for ingestion tuning:
 
-Bidirectional schema transforms with executable code for migrating data between schema versions.
+| Variable | Default | Description |
+|---|---|---|
+| `ATDATA_JETSTREAM_URL` | `wss://jetstream2.us-east.bsky.network/subscribe` | Jetstream endpoint |
+| `ATDATA_RELAY_HOST` | `https://bsky.network` | BGS relay for backfill |
 
-Fields: `name`, `source_schema` (AT-URI), `target_schema` (AT-URI), `getter_code` (JSONB), `putter_code` (JSONB), `description`, `language`.
+Railway will auto-deploy on push, build the Docker image, and start the container.
 
 ## Development
 

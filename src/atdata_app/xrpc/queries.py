@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
-from atproto_identity.resolver import AsyncIdResolver
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from atdata_app import get_resolver
 from atdata_app.database import (
     COLLECTION_TABLE_MAP,
     query_get_entries,
@@ -44,21 +45,12 @@ from atdata_app.models import (
 
 router = APIRouter()
 
-_id_resolver: AsyncIdResolver | None = None
-
-
-def _get_resolver() -> AsyncIdResolver:
-    global _id_resolver  # noqa: PLW0603
-    if _id_resolver is None:
-        _id_resolver = AsyncIdResolver()
-    return _id_resolver
-
 
 async def _resolve_handle(handle: str) -> str:
     """Resolve a handle or DID to a DID. Handles pass through if already a DID."""
     if handle.startswith("did:"):
         return handle
-    resolver = _get_resolver()
+    resolver = get_resolver()
     did = await resolver.handle.resolve(handle)
     if did is None:
         raise HTTPException(status_code=400, detail=f"Could not resolve handle: {handle}")
@@ -128,7 +120,7 @@ async def resolve_blobs(
     uris: list[str] = Query(..., max_length=25),
 ) -> ResolveBlobsResponse:
     pool = request.app.state.db_pool
-    resolver = _get_resolver()
+    resolver = get_resolver()
     results: list[dict[str, Any]] = []
 
     for uri in uris:
@@ -143,7 +135,6 @@ async def resolve_blobs(
             results.append({"uri": uri, "error": "Entry not found"})
             continue
 
-        import json
         storage = row["storage"]
         if isinstance(storage, str):
             storage = json.loads(storage)

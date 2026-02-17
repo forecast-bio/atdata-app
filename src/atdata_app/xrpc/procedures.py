@@ -10,9 +10,9 @@ import logging
 from typing import Any
 
 import httpx
-from atproto_identity.resolver import AsyncIdResolver
 from fastapi import APIRouter, HTTPException, Request
 
+from atdata_app import get_resolver
 from atdata_app.auth import verify_service_auth
 from atdata_app.database import (
     query_get_entry,
@@ -25,18 +25,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-_id_resolver: AsyncIdResolver | None = None
-
-
-def _get_resolver() -> AsyncIdResolver:
-    global _id_resolver  # noqa: PLW0603
-    if _id_resolver is None:
-        _id_resolver = AsyncIdResolver()
-    return _id_resolver
-
 
 async def _resolve_pds(did: str) -> str:
-    resolver = _get_resolver()
+    resolver = get_resolver()
     data = await resolver.did.resolve_atproto_data(did)
     if not data or not data.pds:
         raise HTTPException(status_code=502, detail=f"Could not resolve PDS for {did}")

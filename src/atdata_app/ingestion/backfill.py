@@ -7,36 +7,19 @@ import logging
 from typing import Any
 
 import httpx
-from atproto_identity.resolver import AsyncIdResolver
 from fastapi import FastAPI
 
-from atdata_app import database as db
+from atdata_app import database as db, get_resolver
 
 logger = logging.getLogger(__name__)
 
 BACKFILL_COLLECTIONS = list(db.COLLECTION_TABLE_MAP.keys())
 
-_UPSERT_FNS: dict[str, Any] = {
-    "schemas": db.upsert_schema,
-    "entries": db.upsert_entry,
-    "labels": db.upsert_label,
-    "lenses": db.upsert_lens,
-}
-
-_id_resolver: AsyncIdResolver | None = None
-
-
-def _get_resolver() -> AsyncIdResolver:
-    global _id_resolver  # noqa: PLW0603
-    if _id_resolver is None:
-        _id_resolver = AsyncIdResolver()
-    return _id_resolver
-
 
 async def _resolve_pds(did: str) -> str | None:
     """Resolve a DID to its PDS endpoint URL."""
     try:
-        resolver = _get_resolver()
+        resolver = get_resolver()
         data = await resolver.did.resolve_atproto_data(did)
         return data.pds if data else None
     except Exception:
@@ -87,7 +70,7 @@ async def _backfill_repo(
 ) -> None:
     """Fetch all records for a DID+collection from its PDS and upsert them."""
     table = db.COLLECTION_TABLE_MAP[collection]
-    upsert_fn = _UPSERT_FNS[table]
+    upsert_fn = db.UPSERT_FNS[table]
 
     async with sem:
         pds = await _resolve_pds(did)

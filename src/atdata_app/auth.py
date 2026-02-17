@@ -4,19 +4,12 @@ from __future__ import annotations
 
 import logging
 
-from atproto_identity.resolver import AsyncIdResolver
+from atproto_server.auth.jwt import verify_jwt_async
 from fastapi import HTTPException, Request
 
+from atdata_app import get_resolver
+
 logger = logging.getLogger(__name__)
-
-_id_resolver: AsyncIdResolver | None = None
-
-
-def _get_resolver() -> AsyncIdResolver:
-    global _id_resolver  # noqa: PLW0603
-    if _id_resolver is None:
-        _id_resolver = AsyncIdResolver()
-    return _id_resolver
 
 
 class ServiceAuthPayload:
@@ -46,9 +39,7 @@ async def verify_service_auth(
     config = request.app.state.config
 
     try:
-        from atproto_server.auth.jwt import verify_jwt_async
-
-        resolver = _get_resolver()
+        resolver = get_resolver()
 
         async def get_signing_key(did: str, force_refresh: bool = False) -> str:
             return await resolver.did.resolve_atproto_key(did, force_refresh)

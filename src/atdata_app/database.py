@@ -212,6 +212,14 @@ async def delete_record(pool: asyncpg.Pool, table: str, did: str, rkey: str) -> 
         )
 
 
+UPSERT_FNS = {
+    "schemas": upsert_schema,
+    "entries": upsert_entry,
+    "labels": upsert_label,
+    "lenses": upsert_lens,
+}
+
+
 # ---------------------------------------------------------------------------
 # Cursor state
 # ---------------------------------------------------------------------------
@@ -354,7 +362,7 @@ async def query_list_entries(
 
     async with pool.acquire() as conn:
         return await conn.fetch(
-            f"SELECT * FROM entries {where} ORDER BY indexed_at DESC, did, rkey LIMIT ${idx}",
+            f"SELECT * FROM entries {where} ORDER BY indexed_at DESC, did DESC, rkey DESC LIMIT ${idx}",
             *params,
         )
 
@@ -388,7 +396,7 @@ async def query_list_schemas(
 
     async with pool.acquire() as conn:
         return await conn.fetch(
-            f"SELECT * FROM schemas {where} ORDER BY indexed_at DESC, did, rkey LIMIT ${idx}",
+            f"SELECT * FROM schemas {where} ORDER BY indexed_at DESC, did DESC, rkey DESC LIMIT ${idx}",
             *params,
         )
 
@@ -434,7 +442,7 @@ async def query_list_lenses(
 
     async with pool.acquire() as conn:
         return await conn.fetch(
-            f"SELECT * FROM lenses {where} ORDER BY indexed_at DESC, did, rkey LIMIT ${idx}",
+            f"SELECT * FROM lenses {where} ORDER BY indexed_at DESC, did DESC, rkey DESC LIMIT ${idx}",
             *params,
         )
 
@@ -484,7 +492,7 @@ async def query_search_datasets(
             f"""
             SELECT *, ts_rank(search_tsv, plainto_tsquery('english', $1)) AS rank
             FROM entries {where}
-            ORDER BY rank DESC, indexed_at DESC, did, rkey
+            ORDER BY rank DESC, indexed_at DESC, did DESC, rkey DESC
             LIMIT ${idx}
             """,
             *params,
@@ -529,7 +537,7 @@ async def query_search_lenses(
 
     async with pool.acquire() as conn:
         return await conn.fetch(
-            f"SELECT * FROM lenses {where} ORDER BY indexed_at DESC, did, rkey LIMIT ${idx}",
+            f"SELECT * FROM lenses {where} ORDER BY indexed_at DESC, did DESC, rkey DESC LIMIT ${idx}",
             *params,
         )
 

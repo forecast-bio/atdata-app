@@ -87,7 +87,9 @@ async def test_process_commit_schema(mock_upsert):
         },
     )
     await process_commit(pool, event)
-    assert mock_upsert.called
+    mock_upsert.assert_called_once_with(
+        pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
+    )
 
 
 @pytest.mark.asyncio
@@ -104,7 +106,9 @@ async def test_process_commit_label(mock_upsert):
         },
     )
     await process_commit(pool, event)
-    assert mock_upsert.called
+    mock_upsert.assert_called_once_with(
+        pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
+    )
 
 
 @pytest.mark.asyncio
@@ -124,4 +128,29 @@ async def test_process_commit_lens(mock_upsert):
         },
     )
     await process_commit(pool, event)
-    assert mock_upsert.called
+    mock_upsert.assert_called_once_with(
+        pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
+    )
+
+
+@pytest.mark.asyncio
+@patch(f"{_DB}.upsert_entry", new_callable=AsyncMock)
+async def test_process_commit_update(mock_upsert):
+    """Update operations should route to the same upsert function as create."""
+    pool = AsyncMock()
+    event = _make_event(operation="update")
+    await process_commit(pool, event)
+    mock_upsert.assert_called_once_with(
+        pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
+    )
+
+
+@pytest.mark.asyncio
+@patch(f"{_DB}.upsert_entry", new_callable=AsyncMock)
+async def test_process_commit_upsert_error_is_caught(mock_upsert):
+    """Upsert failures should be logged, not raised."""
+    mock_upsert.side_effect = Exception("db error")
+    pool = AsyncMock()
+    event = _make_event(operation="create")
+    # Should not raise
+    await process_commit(pool, event)

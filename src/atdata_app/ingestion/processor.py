@@ -11,9 +11,6 @@ from atdata_app import database as db
 
 logger = logging.getLogger(__name__)
 
-# Re-export for backfill.py
-COLLECTION_TABLE_MAP = db.COLLECTION_TABLE_MAP
-
 
 async def process_commit(pool: asyncpg.Pool, event: dict[str, Any]) -> None:
     """Process a Jetstream commit event.

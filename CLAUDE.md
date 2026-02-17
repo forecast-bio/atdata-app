@@ -78,6 +78,16 @@ All prefixed with `ATDATA_` (via pydantic-settings). Key ones:
 
 Tests run without a database. External dependencies (DB pool, upsert functions) are mocked with `unittest.mock.AsyncMock`. The `conftest.py` fixture provides a dev-mode `AppConfig`. Identity/DID tests use httpx `ASGITransport` to test endpoints in-process.
 
+## Git Branching (Git Flow)
+
+- **`main`** — production-ready releases only. Merges come from `release/*` or `hotfix/*` branches.
+- **`develop`** — integration branch. All feature work merges here via PR.
+- **`feature/*`** — branch from `develop`, PR back to `develop`. Name: `feature/short-description`.
+- **`release/*`** — branch from `develop` when preparing a release. Merge to both `main` and `develop` when done. Tag `main` with the version.
+- **`hotfix/*`** — branch from `main` for urgent production fixes. Merge to both `main` and `develop`.
+
+When creating PRs, always target `develop` unless it's a release or hotfix.
+
 ## Repo Tooling
 
 The `.claude/`, `.chainlink/`, and `.vscode/` directories are committed to the repo:

@@ -551,6 +551,17 @@ async def query_record_counts(pool: asyncpg.Pool) -> dict[str, int]:
         return counts
 
 
+async def query_labels_for_dataset(
+    pool: asyncpg.Pool, dataset_uri: str, limit: int = 50
+) -> list[asyncpg.Record]:
+    async with pool.acquire() as conn:
+        return await conn.fetch(
+            "SELECT * FROM labels WHERE dataset_uri = $1 ORDER BY created_at DESC LIMIT $2",
+            dataset_uri,
+            limit,
+        )
+
+
 async def query_record_exists(
     pool: asyncpg.Pool, table: str, did: str, rkey: str
 ) -> bool:

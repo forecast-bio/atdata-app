@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.2b1] - 2026-02-18
+
+### Added
+
+- PostgreSQL integration test suite (58 tests) covering schema validation, upserts, queries, search, analytics, pagination, and edge cases
+- Docker auto-start for local integration testing — `conftest.py` spins up a PostgreSQL container when `TEST_DATABASE_URL` is not set
+- `integration-test` CI job running against PostgreSQL 15, 16, and 17
+
+### Fixed
+
+- Schema: `array_to_string()` is `STABLE`, not `IMMUTABLE` — added `immutable_array_to_string()` wrapper so the `search_tsv` generated column works on all PostgreSQL versions
+- Database: cursor pagination passed `indexed_at` as string instead of `datetime`, causing asyncpg `DataError` with extended query protocol
+- Database: analytics interval queries passed string literals instead of `timedelta` objects, causing asyncpg encoding failures
+- CI: `schema-check` job silently ignored SQL errors — added `ON_ERROR_STOP=1` to `psql` invocations
+
 ## [0.2.1b1] - 2026-02-17
 
 ### Security

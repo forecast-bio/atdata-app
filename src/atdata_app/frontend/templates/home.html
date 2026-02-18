@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Search Datasets{% endblock %}
+{% block content %}
+<h1>Dataset Browser</h1>
+<form action="/" method="get" role="search">
+    <fieldset role="group">
+        <input type="search" name="q" value="{{ q }}" placeholder="Search datasets…"
+               aria-label="Search datasets"
+               hx-get="/" hx-target="#results" hx-select="#results" hx-trigger="input changed delay:300ms"
+               hx-include="[name='tag']" hx-push-url="true">
+        <button type="submit">Search</button>
+    </fieldset>
+    {% if all_tags %}
+    <div class="tag-filters">
+        {% for tag in all_tags %}
+        <label>
+            <input type="checkbox" name="tag" value="{{ tag }}"
+                   {{ "checked" if tag in active_tags else "" }}
+                   hx-get="/" hx-target="#results" hx-select="#results"
+                   hx-include="[name='q'], [name='tag']" hx-push-url="true">
+            {{ tag }}
+        </label>
+        {% endfor %}
+    </div>
+    {% endif %}
+</form>
+
+<div id="results">
+    {% if entries %}
+    <div class="dataset-list">
+        {% for entry in entries %}
+        <article>
+            <header>
+                <h3><a href="/dataset/{{ entry.did }}/{{ entry.rkey }}">{{ entry.name }}</a></h3>
+                <small>by <a href="/profile/{{ entry.did }}">{{ entry.did }}</a></small>
+            </header>
+            {% if entry.description %}
+            <p>{{ entry.description }}</p>
+            {% endif %}
+            {% if entry.tags %}
+            <div class="tags">
+                {% for tag in entry.tags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+    {% if cursor %}
+    <div class="pagination">
+        <a href="/?q={{ q }}&cursor={{ cursor }}{% for t in active_tags %}&tag={{ t }}{% endfor %}"
+           hx-get="/?q={{ q }}&cursor={{ cursor }}{% for t in active_tags %}&tag={{ t }}{% endfor %}"
+           hx-target="#results" hx-select="#results" hx-push-url="true"
+           role="button" class="outline">Load more</a>
+    </div>
+    {% endif %}
+    {% elif q %}
+    <p>No datasets found for "{{ q }}".</p>
+    {% else %}
+    <p>Enter a search query to find datasets.</p>
+    {% endif %}
+</div>
+{% endblock %}

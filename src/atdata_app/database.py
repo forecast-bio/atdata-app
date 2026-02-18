@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from datetime import datetime, timedelta
 from importlib import resources
 from typing import Any
 
@@ -355,7 +356,7 @@ async def query_list_entries(
         conditions.append(
             f"(indexed_at, did, rkey) < (${idx}, ${idx + 1}, ${idx + 2})"
         )
-        params.extend([cursor_indexed_at, cursor_did, cursor_rkey])
+        params.extend([datetime.fromisoformat(cursor_indexed_at), cursor_did, cursor_rkey])
         idx += 3
 
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
@@ -389,7 +390,7 @@ async def query_list_schemas(
         conditions.append(
             f"(indexed_at, did, rkey) < (${idx}, ${idx + 1}, ${idx + 2})"
         )
-        params.extend([cursor_indexed_at, cursor_did, cursor_rkey])
+        params.extend([datetime.fromisoformat(cursor_indexed_at), cursor_did, cursor_rkey])
         idx += 3
 
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
@@ -435,7 +436,7 @@ async def query_list_lenses(
         conditions.append(
             f"(indexed_at, did, rkey) < (${idx}, ${idx + 1}, ${idx + 2})"
         )
-        params.extend([cursor_indexed_at, cursor_did, cursor_rkey])
+        params.extend([datetime.fromisoformat(cursor_indexed_at), cursor_did, cursor_rkey])
         idx += 3
 
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
@@ -482,7 +483,7 @@ async def query_search_datasets(
         conditions.append(
             f"(indexed_at, did, rkey) < (${idx}, ${idx + 1}, ${idx + 2})"
         )
-        params.extend([cursor_indexed_at, cursor_did, cursor_rkey])
+        params.extend([datetime.fromisoformat(cursor_indexed_at), cursor_did, cursor_rkey])
         idx += 3
 
     where = f"WHERE {' AND '.join(conditions)}"
@@ -530,7 +531,7 @@ async def query_search_lenses(
         conditions.append(
             f"(indexed_at, did, rkey) < (${idx}, ${idx + 1}, ${idx + 2})"
         )
-        params.extend([cursor_indexed_at, cursor_did, cursor_rkey])
+        params.extend([datetime.fromisoformat(cursor_indexed_at), cursor_did, cursor_rkey])
         idx += 3
 
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
@@ -619,10 +620,10 @@ def fire_analytics_event(
     )
 
 
-PERIOD_INTERVALS = {
-    "day": "1 day",
-    "week": "7 days",
-    "month": "30 days",
+PERIOD_INTERVALS: dict[str, timedelta] = {
+    "day": timedelta(days=1),
+    "week": timedelta(days=7),
+    "month": timedelta(days=30),
 }
 
 
@@ -631,7 +632,7 @@ async def query_analytics_summary(
     period: str = "week",
 ) -> dict[str, Any]:
     """Aggregate analytics for the getAnalytics endpoint."""
-    interval = PERIOD_INTERVALS.get(period, "7 days")
+    interval = PERIOD_INTERVALS.get(period, timedelta(days=7))
     async with pool.acquire() as conn:
         # Total views (view_entry + view_schema events)
         row = await conn.fetchrow(
@@ -713,7 +714,7 @@ async def query_entry_stats(
     period: str = "week",
 ) -> dict[str, Any]:
     """Get analytics stats for a specific dataset entry."""
-    interval = PERIOD_INTERVALS.get(period, "7 days")
+    interval = PERIOD_INTERVALS.get(period, timedelta(days=7))
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
@@ -737,7 +738,7 @@ async def query_entry_stats(
 
 async def query_active_publishers(pool: asyncpg.Pool, days: int = 30) -> int:
     """Count distinct publishers with records indexed in the last N days."""
-    interval = f"{days} days"
+    interval = timedelta(days=days)
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """

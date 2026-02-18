@@ -9,11 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Server-rendered dataset browser frontend with Jinja2 templates, HTMX, and PicoCSS — home/search, dataset detail, schema detail, schemas list, publisher profile, and about pages
 - MCP (Model Context Protocol) server for agent-based dataset queries — exposes search, list, get, and describe tools for LLM agents (`mcp_server.py`)
 - `atdata-mcp` CLI entry point for running the MCP server
 - Lightweight server-side analytics: `analytics_events` table, `analytics_counters` summary table, fire-and-forget event recording via `asyncio.create_task()`
 - XRPC analytics endpoints: `getAnalytics` (service-wide stats by period) and `getEntryStats` (per-dataset view/search counts)
 - Analytics summary in `describeService` response (total views, searches, active publishers)
+- `query_labels_for_dataset` database helper for retrieving labels by dataset URI
 - PyPI publish workflow via GitHub Actions with OIDC trusted publishing
 
 ### Fixed

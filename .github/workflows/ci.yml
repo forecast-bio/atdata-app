@@ -83,3 +83,33 @@ jobs:
           SELECT name FROM entries WHERE search_tsv @@ plainto_tsquery('english'::regconfig, 'Test');
           SQL
           echo "Schema validation and smoke test passed on PostgreSQL ${{ matrix.postgres-version }}"
+
+  integration-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        postgres-version: ["15", "16", "17"]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres-version }}
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: atdata_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --dev
+      - name: Run integration tests
+        env:
+          TEST_DATABASE_URL: postgresql://test:test@localhost:5432/atdata_test
+        run: uv run pytest tests/test_integration.py -v

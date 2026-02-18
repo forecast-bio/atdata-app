@@ -207,3 +207,18 @@ class DescribeServiceResponse(BaseModel):
     did: str
     availableCollections: list[str]
     recordCount: dict[str, int]
+    analytics: dict[str, Any] | None = None
+
+
+class GetAnalyticsResponse(BaseModel):
+    totalViews: int
+    totalSearches: int
+    topDatasets: list[dict[str, Any]]
+    topSearchTerms: list[dict[str, Any]]
+    recordCounts: dict[str, int]
+
+
+class GetEntryStatsResponse(BaseModel):
+    views: int
+    searchAppearances: int
+    period: str

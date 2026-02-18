@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from importlib import resources
@@ -560,6 +561,199 @@ async def query_labels_for_dataset(
             dataset_uri,
             limit,
         )
+
+
+# ---------------------------------------------------------------------------
+# Analytics
+# ---------------------------------------------------------------------------
+
+
+async def record_analytics_event(
+    pool: asyncpg.Pool,
+    event_type: str,
+    target_did: str | None = None,
+    target_rkey: str | None = None,
+    query_params: dict[str, Any] | None = None,
+) -> None:
+    """Insert an analytics event. Designed to be called via asyncio.create_task()."""
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                INSERT INTO analytics_events (event_type, target_did, target_rkey, query_params)
+                VALUES ($1, $2, $3, $4::jsonb)
+                """,
+                event_type,
+                target_did,
+                target_rkey,
+                json.dumps(query_params) if query_params else None,
+            )
+            # Bump the pre-aggregated counter if we have a target
+            if target_did and target_rkey:
+                await conn.execute(
+                    """
+                    INSERT INTO analytics_counters (target_did, target_rkey, event_type, count, last_updated)
+                    VALUES ($1, $2, $3, 1, NOW())
+                    ON CONFLICT (target_did, target_rkey, event_type) DO UPDATE SET
+                        count = analytics_counters.count + 1,
+                        last_updated = NOW()
+                    """,
+                    target_did,
+                    target_rkey,
+                    event_type,
+                )
+    except Exception:
+        logger.warning("Failed to record analytics event %s", event_type, exc_info=True)
+
+
+def fire_analytics_event(
+    pool: asyncpg.Pool,
+    event_type: str,
+    target_did: str | None = None,
+    target_rkey: str | None = None,
+    query_params: dict[str, Any] | None = None,
+) -> None:
+    """Fire-and-forget analytics recording. Does not block the caller."""
+    asyncio.create_task(
+        record_analytics_event(pool, event_type, target_did, target_rkey, query_params)
+    )
+
+
+PERIOD_INTERVALS = {
+    "day": "1 day",
+    "week": "7 days",
+    "month": "30 days",
+}
+
+
+async def query_analytics_summary(
+    pool: asyncpg.Pool,
+    period: str = "week",
+) -> dict[str, Any]:
+    """Aggregate analytics for the getAnalytics endpoint."""
+    interval = PERIOD_INTERVALS.get(period, "7 days")
+    async with pool.acquire() as conn:
+        # Total views (view_entry + view_schema events)
+        row = await conn.fetchrow(
+            """
+            SELECT
+                COUNT(*) FILTER (WHERE event_type LIKE 'view_%') AS total_views,
+                COUNT(*) FILTER (WHERE event_type = 'search') AS total_searches
+            FROM analytics_events
+            WHERE created_at >= NOW() - $1::interval
+            """,
+            interval,
+        )
+        total_views = row["total_views"]
+        total_searches = row["total_searches"]
+
+        # Top datasets by view count in period
+        top_rows = await conn.fetch(
+            """
+            SELECT e.target_did, e.target_rkey, ent.name, COUNT(*) AS views
+            FROM analytics_events e
+            LEFT JOIN entries ent ON ent.did = e.target_did AND ent.rkey = e.target_rkey
+            WHERE e.event_type = 'view_entry'
+              AND e.created_at >= NOW() - $1::interval
+              AND e.target_did IS NOT NULL
+            GROUP BY e.target_did, e.target_rkey, ent.name
+            ORDER BY views DESC
+            LIMIT 10
+            """,
+            interval,
+        )
+        top_datasets = [
+            {
+                "uri": f"at://{r['target_did']}/ac.foundation.dataset.record/{r['target_rkey']}",
+                "did": r["target_did"],
+                "rkey": r["target_rkey"],
+                "name": r["name"] or "",
+                "views": r["views"],
+            }
+            for r in top_rows
+        ]
+
+        # Top search terms
+        term_rows = await conn.fetch(
+            """
+            SELECT query_params->>'q' AS term, COUNT(*) AS count
+            FROM analytics_events
+            WHERE event_type = 'search'
+              AND query_params->>'q' IS NOT NULL
+              AND created_at >= NOW() - $1::interval
+            GROUP BY term
+            ORDER BY count DESC
+            LIMIT 10
+            """,
+            interval,
+        )
+        top_search_terms = [
+            {"term": r["term"], "count": r["count"]} for r in term_rows
+        ]
+
+        # Record counts
+        counts = {}
+        for collection, table in COLLECTION_TABLE_MAP.items():
+            c = await conn.fetchrow(f"SELECT COUNT(*) AS cnt FROM {table}")  # noqa: S608
+            counts[collection] = c["cnt"]
+
+        return {
+            "totalViews": total_views,
+            "totalSearches": total_searches,
+            "topDatasets": top_datasets,
+            "topSearchTerms": top_search_terms,
+            "recordCounts": counts,
+        }
+
+
+async def query_entry_stats(
+    pool: asyncpg.Pool,
+    did: str,
+    rkey: str,
+    period: str = "week",
+) -> dict[str, Any]:
+    """Get analytics stats for a specific dataset entry."""
+    interval = PERIOD_INTERVALS.get(period, "7 days")
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT
+                COUNT(*) FILTER (WHERE event_type = 'view_entry') AS views,
+                COUNT(*) FILTER (WHERE event_type = 'search') AS search_appearances
+            FROM analytics_events
+            WHERE target_did = $1 AND target_rkey = $2
+              AND created_at >= NOW() - $3::interval
+            """,
+            did,
+            rkey,
+            interval,
+        )
+        return {
+            "views": row["views"],
+            "searchAppearances": row["search_appearances"],
+            "period": period,
+        }
+
+
+async def query_active_publishers(pool: asyncpg.Pool, days: int = 30) -> int:
+    """Count distinct publishers with records indexed in the last N days."""
+    interval = f"{days} days"
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT COUNT(DISTINCT did) AS cnt FROM (
+                SELECT did FROM entries WHERE indexed_at >= NOW() - $1::interval
+                UNION
+                SELECT did FROM schemas WHERE indexed_at >= NOW() - $1::interval
+                UNION
+                SELECT did FROM labels WHERE indexed_at >= NOW() - $1::interval
+                UNION
+                SELECT did FROM lenses WHERE indexed_at >= NOW() - $1::interval
+            ) sub
+            """,
+            interval,
+        )
+        return row["cnt"]
 
 
 async def query_record_exists(

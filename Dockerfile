@@ -17,7 +17,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 # Install the project itself
 COPY src/ src/
 COPY README.md ./
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --no-editable
 
 # --- Runtime stage: minimal image ---
 FROM python:3.12-slim

@@ -10,6 +10,10 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from atdata_app import get_resolver
 from atdata_app.database import (
     COLLECTION_TABLE_MAP,
+    fire_analytics_event,
+    query_active_publishers,
+    query_analytics_summary,
+    query_entry_stats,
     query_get_entries,
     query_get_entry,
     query_get_schema,
@@ -24,8 +28,10 @@ from atdata_app.database import (
 )
 from atdata_app.models import (
     DescribeServiceResponse,
+    GetAnalyticsResponse,
     GetEntriesResponse,
     GetEntryResponse,
+    GetEntryStatsResponse,
     ListEntriesResponse,
     ListLensesResponse,
     ListSchemasResponse,
@@ -180,6 +186,7 @@ async def get_entry(
     row = await query_get_entry(pool, did, rkey)
     if not row:
         raise HTTPException(status_code=404, detail="Entry not found")
+    fire_analytics_event(pool, "view_entry", target_did=did, target_rkey=rkey)
     return GetEntryResponse(entry=row_to_entry(row))
 
 
@@ -194,6 +201,8 @@ async def get_entries(
         did, _, rkey = parse_at_uri(uri)
         keys.append((did, rkey))
     rows = await query_get_entries(pool, keys)
+    for did, rkey in keys:
+        fire_analytics_event(pool, "view_entry", target_did=did, target_rkey=rkey)
     return GetEntriesResponse(entries=[row_to_entry(r) for r in rows])
 
 
@@ -212,6 +221,7 @@ async def get_schema(
     row = await query_get_schema(pool, did, rkey)
     if not row:
         raise HTTPException(status_code=404, detail="Schema not found")
+    fire_analytics_event(pool, "view_schema", target_did=did, target_rkey=rkey)
     return row_to_schema(row)
 
 
@@ -243,6 +253,7 @@ async def list_entries(
     pool = request.app.state.db_pool
     c_at, c_did, c_rkey = _parse_cursor(cursor)
     rows = await query_list_entries(pool, repo, limit, c_did, c_rkey, c_at)
+    fire_analytics_event(pool, "list_entries", query_params={"repo": repo} if repo else None)
     return ListEntriesResponse(
         entries=[row_to_entry(r) for r in rows],
         cursor=_maybe_cursor(rows, limit),
@@ -259,6 +270,7 @@ async def list_schemas(
     pool = request.app.state.db_pool
     c_at, c_did, c_rkey = _parse_cursor(cursor)
     rows = await query_list_schemas(pool, repo, limit, c_did, c_rkey, c_at)
+    fire_analytics_event(pool, "list_schemas", query_params={"repo": repo} if repo else None)
     return ListSchemasResponse(
         schemas=[row_to_schema(r) for r in rows],
         cursor=_maybe_cursor(rows, limit),
@@ -279,6 +291,7 @@ async def list_lenses(
     rows = await query_list_lenses(
         pool, repo, sourceSchema, targetSchema, limit, c_did, c_rkey, c_at
     )
+    fire_analytics_event(pool, "list_lenses", query_params={"repo": repo} if repo else None)
     return ListLensesResponse(
         lenses=[row_to_lens(r) for r in rows],
         cursor=_maybe_cursor(rows, limit),
@@ -305,6 +318,7 @@ async def search_datasets(
     rows = await query_search_datasets(
         pool, q, tags, schemaRef, repo, limit, c_did, c_rkey, c_at
     )
+    fire_analytics_event(pool, "search", query_params={"q": q, "tags": tags})
     return SearchDatasetsResponse(
         entries=[row_to_entry(r) for r in rows],
         cursor=_maybe_cursor(rows, limit),
@@ -340,8 +354,54 @@ async def describe_service(request: Request) -> DescribeServiceResponse:
     config = request.app.state.config
     pool = request.app.state.db_pool
     counts = await query_record_counts(pool)
+    fire_analytics_event(pool, "describe")
+
+    # Analytics summary for describeService
+    summary = await query_analytics_summary(pool, "month")
+    active_publishers = await query_active_publishers(pool, 30)
+
     return DescribeServiceResponse(
         did=config.service_did,
         availableCollections=list(COLLECTION_TABLE_MAP.keys()),
         recordCount=counts,
+        analytics={
+            "totalViews": summary["totalViews"],
+            "totalSearches": summary["totalSearches"],
+            "activePublishers": active_publishers,
+        },
     )
+
+
+# ---------------------------------------------------------------------------
+# getAnalytics
+# ---------------------------------------------------------------------------
+
+
+@router.get("/ac.foundation.dataset.getAnalytics")
+async def get_analytics(
+    request: Request,
+    period: str = Query("week", pattern="^(day|week|month)$"),
+) -> GetAnalyticsResponse:
+    pool = request.app.state.db_pool
+    summary = await query_analytics_summary(pool, period)
+    return GetAnalyticsResponse(**summary)
+
+
+# ---------------------------------------------------------------------------
+# getEntryStats
+# ---------------------------------------------------------------------------
+
+
+@router.get("/ac.foundation.dataset.getEntryStats")
+async def get_entry_stats(
+    request: Request,
+    uri: str = Query(...),
+    period: str = Query("week", pattern="^(day|week|month)$"),
+) -> GetEntryStatsResponse:
+    pool = request.app.state.db_pool
+    try:
+        did, collection, rkey = parse_at_uri(uri)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid AT-URI")
+    stats = await query_entry_stats(pool, did, rkey, period)
+    return GetEntryStatsResponse(**stats)

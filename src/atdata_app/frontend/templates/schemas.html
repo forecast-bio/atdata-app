@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Schemas{% endblock %}
+{% block content %}
+<h1>Schemas</h1>
+
+<div id="results">
+    {% if schemas %}
+    <table>
+        <thead>
+            <tr><th>Name</th><th>Version</th><th>Type</th><th>Description</th><th>Publisher</th></tr>
+        </thead>
+        <tbody>
+            {% for s in schemas %}
+            <tr>
+                <td><a href="/schema/{{ s.did }}/{{ s.rkey }}">{{ s.name }}</a></td>
+                <td>{{ s.version }}</td>
+                <td>{{ s.schemaType }}</td>
+                <td>{{ s.get("description", "") }}</td>
+                <td><a href="/profile/{{ s.did }}">{{ s.did[:20] }}…</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% if cursor %}
+    <div class="pagination">
+        <a href="/schemas?cursor={{ cursor }}"
+           hx-get="/schemas?cursor={{ cursor }}"
+           hx-target="#results" hx-select="#results" hx-push-url="true"
+           role="button" class="outline">Load more</a>
+    </div>
+    {% endif %}
+    {% else %}
+    <p>No schemas indexed yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

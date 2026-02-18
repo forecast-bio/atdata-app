@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ schema.name }} v{{ schema.version }}{% endblock %}
+{% block content %}
+<hgroup>
+    <h1>{{ schema.name }}</h1>
+    <p>v{{ schema.version }} — Published by <a href="/profile/{{ schema.did }}">{{ schema.did }}</a></p>
+</hgroup>
+
+{% if schema.description %}
+<p>{{ schema.description }}</p>
+{% endif %}
+
+<section>
+    <h2>Details</h2>
+    <table>
+        <tbody>
+            <tr><th>AT-URI</th><td><code>{{ schema.uri }}</code></td></tr>
+            <tr><th>Type</th><td>{{ schema.schemaType }}</td></tr>
+            <tr><th>Version</th><td>{{ schema.version }}</td></tr>
+            <tr><th>Created</th><td>{{ schema.createdAt }}</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<section>
+    <h2>Schema Body</h2>
+    <pre><code>{{ schema_body_json }}</code></pre>
+</section>
+{% endblock %}

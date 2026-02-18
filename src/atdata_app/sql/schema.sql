@@ -112,3 +112,28 @@ CREATE TABLE IF NOT EXISTS cursor_state (
     cursor      BIGINT NOT NULL,
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Analytics events (lightweight server-side request counting)
+CREATE TABLE IF NOT EXISTS analytics_events (
+    id           BIGSERIAL PRIMARY KEY,
+    event_type   TEXT NOT NULL,
+    target_did   TEXT,
+    target_rkey  TEXT,
+    query_params JSONB,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_analytics_events_type_created
+    ON analytics_events (event_type, created_at);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_target
+    ON analytics_events (target_did, target_rkey, event_type);
+
+-- Pre-aggregated analytics counters (avoids expensive COUNT on events table)
+CREATE TABLE IF NOT EXISTS analytics_counters (
+    target_did   TEXT NOT NULL,
+    target_rkey  TEXT NOT NULL,
+    event_type   TEXT NOT NULL,
+    count        BIGINT NOT NULL DEFAULT 0,
+    last_updated TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (target_did, target_rkey, event_type)
+);

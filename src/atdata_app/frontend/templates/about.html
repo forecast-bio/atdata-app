@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}About{% endblock %}
+{% block content %}
+<h1>About This Service</h1>
+
+<section>
+    <h2>Service Identity</h2>
+    <table>
+        <tbody>
+            <tr><th>DID</th><td><code>{{ service.did }}</code></td></tr>
+        </tbody>
+    </table>
+</section>
+
+<section>
+    <h2>Record Counts</h2>
+    <table>
+        <thead><tr><th>Collection</th><th>Count</th></tr></thead>
+        <tbody>
+            {% for collection, count in service.recordCount.items() %}
+            <tr>
+                <td><code>{{ collection }}</code></td>
+                <td>{{ count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section>
+    <h2>Supported Collections</h2>
+    <ul>
+        {% for col in service.availableCollections %}
+        <li><code>{{ col }}</code></li>
+        {% endfor %}
+    </ul>
+</section>
+{% endblock %}

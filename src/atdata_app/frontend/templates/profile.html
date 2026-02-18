@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ did }}{% endblock %}
+{% block content %}
+<h1>{{ did }}</h1>
+
+<section>
+    <h2>Datasets</h2>
+    {% if entries %}
+    <div class="dataset-list">
+        {% for entry in entries %}
+        <article>
+            <header>
+                <h3><a href="/dataset/{{ entry.did }}/{{ entry.rkey }}">{{ entry.name }}</a></h3>
+            </header>
+            {% if entry.description %}
+            <p>{{ entry.description }}</p>
+            {% endif %}
+            {% if entry.tags %}
+            <div class="tags">
+                {% for tag in entry.tags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>No datasets published.</p>
+    {% endif %}
+</section>
+
+<section>
+    <h2>Schemas</h2>
+    {% if schemas %}
+    <table>
+        <thead><tr><th>Name</th><th>Version</th><th>Type</th></tr></thead>
+        <tbody>
+            {% for s in schemas %}
+            <tr>
+                <td><a href="/schema/{{ s.did }}/{{ s.rkey }}">{{ s.name }}</a></td>
+                <td>{{ s.version }}</td>
+                <td>{{ s.schemaType }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No schemas published.</p>
+    {% endif %}
+</section>
+{% endblock %}

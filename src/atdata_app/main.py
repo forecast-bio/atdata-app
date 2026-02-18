@@ -7,9 +7,12 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from atdata_app.config import AppConfig
 from atdata_app.database import create_pool, run_migrations
+from atdata_app.frontend import router as frontend_router
+from atdata_app.frontend.routes import _FRONTEND_DIR
 from atdata_app.identity import did_json_handler
 from atdata_app.ingestion.backfill import backfill_runner
 from atdata_app.ingestion.jetstream import jetstream_consumer
@@ -53,6 +56,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     # Routes
     app.add_api_route("/.well-known/did.json", did_json_handler, methods=["GET"])
     app.include_router(xrpc_router)
+    app.include_router(frontend_router)
+    app.mount("/static", StaticFiles(directory=str(_FRONTEND_DIR / "static")), name="static")
 
     @app.get("/health")
     async def health():

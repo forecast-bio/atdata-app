@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ entry.name }}{% endblock %}
+{% block content %}
+<hgroup>
+    <h1>{{ entry.name }}</h1>
+    <p>Published by <a href="/profile/{{ entry.did }}">{{ entry.did }}</a></p>
+</hgroup>
+
+{% if entry.description %}
+<p>{{ entry.description }}</p>
+{% endif %}
+
+{% if entry.tags %}
+<div class="tags">
+    {% for tag in entry.tags %}
+    <span class="tag">{{ tag }}</span>
+    {% endfor %}
+</div>
+{% endif %}
+
+<section>
+    <h2>Details</h2>
+    <table>
+        <tbody>
+            <tr><th>AT-URI</th><td><code>{{ entry.uri }}</code></td></tr>
+            {% if entry.license %}
+            <tr><th>License</th><td>{{ entry.license }}</td></tr>
+            {% endif %}
+            <tr><th>Schema</th><td><a href="/schema/{{ schema_did }}/{{ schema_rkey }}">{{ entry.schemaRef }}</a></td></tr>
+            {% if entry.size %}
+            <tr>
+                <th>Size</th>
+                <td>
+                    {% if entry.size.samples is defined %}{{ entry.size.samples }} samples{% endif %}
+                    {% if entry.size.bytes is defined %}{% if entry.size.samples is defined %}, {% endif %}{{ entry.size.bytes }} bytes{% endif %}
+                    {% if entry.size.shards is defined %}{% if entry.size.samples is defined or entry.size.bytes is defined %}, {% endif %}{{ entry.size.shards }} shards{% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            <tr><th>Created</th><td>{{ entry.createdAt }}</td></tr>
+        </tbody>
+    </table>
+</section>
+
+{% if entry.storage %}
+<section>
+    <h2>Storage</h2>
+    <table>
+        <tbody>
+            <tr><th>Type</th><td><code>{{ entry.storage.get("$type", "unknown") }}</code></td></tr>
+            {% if entry.storage.url is defined %}
+            <tr><th>URL</th><td><a href="{{ entry.storage.url }}">{{ entry.storage.url }}</a></td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+
+{% if labels %}
+<section>
+    <h2>Labels</h2>
+    <table>
+        <thead><tr><th>Name</th><th>Version</th><th>Description</th></tr></thead>
+        <tbody>
+            {% for label in labels %}
+            <tr>
+                <td>{{ label.name }}</td>
+                <td>{{ label.get("version", "") }}</td>
+                <td>{{ label.get("description", "") }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+{% endblock %}

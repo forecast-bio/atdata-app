@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS labels (
 
 CREATE INDEX IF NOT EXISTS idx_labels_name ON labels (did, name);
 CREATE INDEX IF NOT EXISTS idx_labels_did ON labels (did);
+CREATE INDEX IF NOT EXISTS idx_labels_dataset_uri ON labels (dataset_uri);
 
 -- Lenses (ac.foundation.dataset.lens)
 CREATE TABLE IF NOT EXISTS lenses (

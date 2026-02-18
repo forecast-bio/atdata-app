@@ -21,8 +21,8 @@ from atdata_app.database import (
     query_search_datasets,
 )
 from atdata_app.models import (
-    decode_cursor,
-    encode_cursor,
+    maybe_cursor,
+    parse_cursor,
     row_to_entry,
     row_to_label,
     row_to_schema,
@@ -48,19 +48,6 @@ def _schema_with_rkey(row) -> dict[str, Any]:
     return d
 
 
-def _parse_cursor(cursor: str | None) -> tuple[str | None, str | None, str | None]:
-    if not cursor:
-        return None, None, None
-    return decode_cursor(cursor)
-
-
-def _maybe_cursor(rows: list, limit: int) -> str | None:
-    if len(rows) < limit:
-        return None
-    last = rows[-1]
-    return encode_cursor(str(last["indexed_at"]), last["did"], last["rkey"])
-
-
 # ---------------------------------------------------------------------------
 # Home / Search
 # ---------------------------------------------------------------------------
@@ -75,12 +62,12 @@ async def home(request: Request, q: str = "", cursor: str | None = None, tag: li
 
     if q:
         limit = 25
-        c_at, c_did, c_rkey = _parse_cursor(cursor)
+        c_at, c_did, c_rkey = parse_cursor(cursor)
         rows = await query_search_datasets(
             pool, q, active_tags or None, None, None, limit, c_did, c_rkey, c_at
         )
         entries = [_entry_with_rkey(r) for r in rows]
-        next_cursor = _maybe_cursor(rows, limit)
+        next_cursor = maybe_cursor(rows, limit)
 
     return templates.TemplateResponse(
         request,
@@ -169,10 +156,10 @@ async def schema_detail(request: Request, did: str, rkey: str):
 async def schemas_list(request: Request, cursor: str | None = None):
     pool = request.app.state.db_pool
     limit = 50
-    c_at, c_did, c_rkey = _parse_cursor(cursor)
+    c_at, c_did, c_rkey = parse_cursor(cursor)
     rows = await query_list_schemas(pool, None, limit, c_did, c_rkey, c_at)
     schemas = [_schema_with_rkey(r) for r in rows]
-    next_cursor = _maybe_cursor(rows, limit)
+    next_cursor = maybe_cursor(rows, limit)
 
     return templates.TemplateResponse(
         request,

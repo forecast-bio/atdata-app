@@ -46,6 +46,21 @@ def decode_cursor(cursor: str) -> tuple[str, str, str]:
     return parts[0], parts[1], parts[2]
 
 
+def parse_cursor(cursor: str | None) -> tuple[str | None, str | None, str | None]:
+    """Decode a cursor string, returning (None, None, None) when absent."""
+    if not cursor:
+        return None, None, None
+    return decode_cursor(cursor)
+
+
+def maybe_cursor(rows: list, limit: int) -> str | None:
+    """Build a cursor from the last row if the result set is full (more pages)."""
+    if len(rows) < limit:
+        return None
+    last = rows[-1]
+    return encode_cursor(str(last["indexed_at"]), last["did"], last["rkey"])
+
+
 # ---------------------------------------------------------------------------
 # Record serialisation helpers
 # ---------------------------------------------------------------------------

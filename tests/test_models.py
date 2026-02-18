@@ -62,7 +62,7 @@ def test_cursor_roundtrip():
 
 
 def test_decode_cursor_invalid_base64():
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         decode_cursor("invalid-base64-cursor==")
 
 

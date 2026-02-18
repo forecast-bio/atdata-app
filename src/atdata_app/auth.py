@@ -54,4 +54,12 @@ async def verify_service_auth(
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid service auth: {e}") from e
 
+    if expected_nsid:
+        lxm = getattr(payload, "lxm", None)
+        if lxm != expected_nsid:
+            raise HTTPException(
+                status_code=401,
+                detail=f"JWT lxm claim '{lxm}' does not match expected '{expected_nsid}'",
+            )
+
     return ServiceAuthPayload(iss=payload.iss, aud=payload.aud)

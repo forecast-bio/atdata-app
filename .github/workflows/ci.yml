@@ -70,7 +70,16 @@ jobs:
           PGPASSWORD: test
           PGDATABASE: atdata_test
         run: |
-          psql -c "INSERT INTO schemas (did, rkey, name, version, schema_type, schema_body, created_at) VALUES ('did:plc:test', 'com.example.test@1.0.0', 'Test Schema', '1.0.0', 'jsonSchema', '{}'::jsonb, '2024-01-01T00:00:00Z');"
-          psql -c "INSERT INTO entries (did, rkey, name, schema_ref, storage, created_at) VALUES ('did:plc:test', '3jqfcqzm3fp2k', 'Test Dataset', 'at://did:plc:test/ac.foundation.dataset.schema/com.example.test@1.0.0', '{\"\\$type\": \"ac.foundation.dataset.record#httpStorage\", \"url\": \"https://example.com/data.csv\"}'::jsonb, '2024-01-01T00:00:00Z');"
-          psql -c "SELECT * FROM entries WHERE search_tsv @@ plainto_tsquery('english'::regconfig, 'Test');" | grep -q "Test Dataset"
+          psql <<'SQL'
+          INSERT INTO schemas (did, rkey, name, version, schema_type, schema_body, created_at)
+          VALUES ('did:plc:test', 'com.example.test@1.0.0', 'Test Schema', '1.0.0', 'jsonSchema', '{}'::jsonb, '2024-01-01T00:00:00Z');
+
+          INSERT INTO entries (did, rkey, name, schema_ref, storage, created_at)
+          VALUES ('did:plc:test', '3jqfcqzm3fp2k', 'Test Dataset',
+                  'at://did:plc:test/ac.foundation.dataset.schema/com.example.test@1.0.0',
+                  '{"$type": "ac.foundation.dataset.record#httpStorage", "url": "https://example.com/data.csv"}'::jsonb,
+                  '2024-01-01T00:00:00Z');
+
+          SELECT name FROM entries WHERE search_tsv @@ plainto_tsquery('english'::regconfig, 'Test');
+          SQL
           echo "Schema validation and smoke test passed on PostgreSQL ${{ matrix.postgres-version }}"

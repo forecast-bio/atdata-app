@@ -62,7 +62,7 @@ jobs:
           PGUSER: test
           PGPASSWORD: test
           PGDATABASE: atdata_test
-        run: psql -f src/atdata_app/sql/schema.sql
+        run: psql -v ON_ERROR_STOP=1 -f src/atdata_app/sql/schema.sql
       - name: Smoke test
         env:
           PGHOST: localhost
@@ -70,7 +70,7 @@ jobs:
           PGPASSWORD: test
           PGDATABASE: atdata_test
         run: |
-          psql <<'SQL'
+          psql -v ON_ERROR_STOP=1 <<'SQL'
           INSERT INTO schemas (did, rkey, name, version, schema_type, schema_body, created_at)
           VALUES ('did:plc:test', 'com.example.test@1.0.0', 'Test Schema', '1.0.0', 'jsonSchema', '{}'::jsonb, '2024-01-01T00:00:00Z');
 

@@ -39,6 +39,7 @@ All of these were only exercised via mocked calls in the existing tests.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -952,7 +953,10 @@ class TestAnalytics:
                 "search",
             )
         assert row is not None
-        assert row["query_params"]["q"] == "genomics"
+        params = row["query_params"]
+        if isinstance(params, str):
+            params = json.loads(params)
+        assert params["q"] == "genomics"
 
     async def test_query_analytics_summary(self, db_pool):
         from atdata_app.database import (

@@ -1,6 +1,16 @@
 -- atdata-app database schema
 -- All ac.foundation.dataset.* record types + cursor state
 
+-- Immutable wrapper for array_to_string(text[], text).
+-- PostgreSQL marks array_to_string as STABLE because the generic anyarray
+-- version must handle types whose output functions are locale-dependent.
+-- For text[] the operation is purely mechanical (no locale dependency),
+-- so an IMMUTABLE wrapper is safe and required for use in generated columns.
+CREATE OR REPLACE FUNCTION immutable_array_to_string(arr TEXT[], sep TEXT)
+RETURNS TEXT LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
+    SELECT array_to_string(arr, sep)
+$$;
+
 -- Schemas (ac.foundation.dataset.schema)
 -- rkey format: {NSID}@{semver}
 CREATE TABLE IF NOT EXISTS schemas (
@@ -40,6 +50,11 @@ CREATE TABLE IF NOT EXISTS entries (
     content_metadata    JSONB,
     created_at          TEXT NOT NULL,
     indexed_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    search_tsv          TSVECTOR GENERATED ALWAYS AS (
+                            setweight(to_tsvector('english'::regconfig, coalesce(name, '')), 'A') ||
+                            setweight(to_tsvector('english'::regconfig, coalesce(description, '')), 'B') ||
+                            setweight(to_tsvector('english'::regconfig, coalesce(immutable_array_to_string(tags, ' '), '')), 'C')
+                        ) STORED,
     PRIMARY KEY (did, rkey)
 );
 
@@ -49,7 +64,7 @@ CREATE INDEX IF NOT EXISTS idx_entries_schema_ref ON entries (schema_ref);
 CREATE INDEX IF NOT EXISTS idx_entries_tags ON entries USING GIN (tags);
 CREATE INDEX IF NOT EXISTS idx_entries_indexed_at ON entries (indexed_at DESC);
 
--- Full-text search
+-- Migration: add search_tsv for existing tables created before it was in CREATE TABLE
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -60,7 +75,7 @@ BEGIN
             GENERATED ALWAYS AS (
                 setweight(to_tsvector('english'::regconfig, coalesce(name, '')), 'A') ||
                 setweight(to_tsvector('english'::regconfig, coalesce(description, '')), 'B') ||
-                setweight(to_tsvector('english'::regconfig, coalesce(array_to_string(tags, ' '), '')), 'C')
+                setweight(to_tsvector('english'::regconfig, coalesce(immutable_array_to_string(tags, ' '), '')), 'C')
             ) STORED;
     END IF;
 END $$;

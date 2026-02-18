@@ -34,3 +34,43 @@ jobs:
       - run: uv python install ${{ matrix.python-version }}
       - run: uv sync --dev --python ${{ matrix.python-version }}
       - run: uv run pytest --cov=atdata_app --cov-report=term-missing
+
+  schema-check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        postgres-version: ["15", "16", "17"]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres-version }}
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: atdata_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply schema
+        env:
+          PGHOST: localhost
+          PGUSER: test
+          PGPASSWORD: test
+          PGDATABASE: atdata_test
+        run: psql -f src/atdata_app/sql/schema.sql
+      - name: Smoke test
+        env:
+          PGHOST: localhost
+          PGUSER: test
+          PGPASSWORD: test
+          PGDATABASE: atdata_test
+        run: |
+          psql -c "INSERT INTO schemas (did, rkey, name, version, schema_type, schema_body, created_at) VALUES ('did:plc:test', 'com.example.test@1.0.0', 'Test Schema', '1.0.0', 'jsonSchema', '{}'::jsonb, '2024-01-01T00:00:00Z');"
+          psql -c "INSERT INTO entries (did, rkey, name, schema_ref, storage, created_at) VALUES ('did:plc:test', '3jqfcqzm3fp2k', 'Test Dataset', 'at://did:plc:test/ac.foundation.dataset.schema/com.example.test@1.0.0', '{\"\\$type\": \"ac.foundation.dataset.record#httpStorage\", \"url\": \"https://example.com/data.csv\"}'::jsonb, '2024-01-01T00:00:00Z');"
+          psql -c "SELECT * FROM entries WHERE search_tsv @@ plainto_tsquery('english'::regconfig, 'Test');" | grep -q "Test Dataset"
+          echo "Schema validation and smoke test passed on PostgreSQL ${{ matrix.postgres-version }}"

@@ -58,9 +58,9 @@ BEGIN
     ) THEN
         ALTER TABLE entries ADD COLUMN search_tsv TSVECTOR
             GENERATED ALWAYS AS (
-                setweight(to_tsvector('english', coalesce(name, '')), 'A') ||
-                setweight(to_tsvector('english', coalesce(description, '')), 'B') ||
-                setweight(to_tsvector('english', coalesce(array_to_string(tags, ' '), '')), 'C')
+                setweight(to_tsvector('english'::regconfig, coalesce(name, '')), 'A') ||
+                setweight(to_tsvector('english'::regconfig, coalesce(description, '')), 'B') ||
+                setweight(to_tsvector('english'::regconfig, coalesce(array_to_string(tags, ' '), '')), 'C')
             ) STORED;
     END IF;
 END $$;

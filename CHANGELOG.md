@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.1b1] - 2026-02-17
+
+### Security
+
+- Validate `lxm` claim in service auth JWT to prevent cross-endpoint token reuse
+
+### Added
+
+- PostgreSQL version matrix in CI (`schema-check` job testing against PG 15, 16, 17)
+
+### Fixed
+
+- Schema: use explicit `'english'::regconfig` cast in `search_tsv` generated column for PostgreSQL 17 compatibility
+- Fix `last_time_us` UnboundLocalError in Jetstream consumer on early cancellation
+- Return 400 instead of 500 for invalid AT-URIs in `getEntry`, `getEntries`, `getSchema`
+- Add missing database index on `labels.dataset_uri` for `query_labels_for_dataset`
+- Deduplicate cursor pagination helpers into `models.py`
+
 ## [0.2.0b1] - 2026-02-17
 
 ### Added

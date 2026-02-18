@@ -58,9 +58,9 @@ BEGIN
     ) THEN
         ALTER TABLE entries ADD COLUMN search_tsv TSVECTOR
             GENERATED ALWAYS AS (
-                setweight(to_tsvector('english', coalesce(name, '')), 'A') ||
-                setweight(to_tsvector('english', coalesce(description, '')), 'B') ||
-                setweight(to_tsvector('english', coalesce(array_to_string(tags, ' '), '')), 'C')
+                setweight(to_tsvector('english'::regconfig, coalesce(name, '')), 'A') ||
+                setweight(to_tsvector('english'::regconfig, coalesce(description, '')), 'B') ||
+                setweight(to_tsvector('english'::regconfig, coalesce(array_to_string(tags, ' '), '')), 'C')
             ) STORED;
     END IF;
 END $$;
@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS labels (
 
 CREATE INDEX IF NOT EXISTS idx_labels_name ON labels (did, name);
 CREATE INDEX IF NOT EXISTS idx_labels_did ON labels (did);
+CREATE INDEX IF NOT EXISTS idx_labels_dataset_uri ON labels (dataset_uri);
 
 -- Lenses (ac.foundation.dataset.lens)
 CREATE TABLE IF NOT EXISTS lenses (

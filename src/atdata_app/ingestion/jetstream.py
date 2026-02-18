@@ -32,6 +32,8 @@ async def jetstream_consumer(app: FastAPI) -> None:
     config = app.state.config
     backoff = 1.0
 
+    last_time_us: int | None = None
+
     while True:
         try:
             cursor = await get_cursor(pool)

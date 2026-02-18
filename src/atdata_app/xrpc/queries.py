@@ -40,9 +40,9 @@ from atdata_app.models import (
     ResolveSchemaResponse,
     SearchDatasetsResponse,
     SearchLensesResponse,
-    decode_cursor,
-    encode_cursor,
+    maybe_cursor,
     parse_at_uri,
+    parse_cursor,
     row_to_entry,
     row_to_label,
     row_to_lens,
@@ -182,7 +182,10 @@ async def get_entry(
     uri: str = Query(...),
 ) -> GetEntryResponse:
     pool = request.app.state.db_pool
-    did, collection, rkey = parse_at_uri(uri)
+    try:
+        did, _, rkey = parse_at_uri(uri)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid AT-URI")
     row = await query_get_entry(pool, did, rkey)
     if not row:
         raise HTTPException(status_code=404, detail="Entry not found")
@@ -198,7 +201,10 @@ async def get_entries(
     pool = request.app.state.db_pool
     keys = []
     for uri in uris:
-        did, _, rkey = parse_at_uri(uri)
+        try:
+            did, _, rkey = parse_at_uri(uri)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid AT-URI: {uri}")
         keys.append((did, rkey))
     rows = await query_get_entries(pool, keys)
     for did, rkey in keys:
@@ -217,7 +223,10 @@ async def get_schema(
     uri: str = Query(...),
 ) -> dict[str, Any]:
     pool = request.app.state.db_pool
-    did, collection, rkey = parse_at_uri(uri)
+    try:
+        did, _, rkey = parse_at_uri(uri)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid AT-URI")
     row = await query_get_schema(pool, did, rkey)
     if not row:
         raise HTTPException(status_code=404, detail="Schema not found")
@@ -230,19 +239,6 @@ async def get_schema(
 # ---------------------------------------------------------------------------
 
 
-def _parse_cursor(cursor: str | None) -> tuple[str | None, str | None, str | None]:
-    if not cursor:
-        return None, None, None
-    return decode_cursor(cursor)
-
-
-def _maybe_cursor(rows: list, limit: int) -> str | None:
-    if len(rows) < limit:
-        return None
-    last = rows[-1]
-    return encode_cursor(str(last["indexed_at"]), last["did"], last["rkey"])
-
-
 @router.get("/ac.foundation.dataset.listEntries")
 async def list_entries(
     request: Request,
@@ -251,12 +247,12 @@ async def list_entries(
     cursor: str | None = Query(None),
 ) -> ListEntriesResponse:
     pool = request.app.state.db_pool
-    c_at, c_did, c_rkey = _parse_cursor(cursor)
+    c_at, c_did, c_rkey = parse_cursor(cursor)
     rows = await query_list_entries(pool, repo, limit, c_did, c_rkey, c_at)
     fire_analytics_event(pool, "list_entries", query_params={"repo": repo} if repo else None)
     return ListEntriesResponse(
         entries=[row_to_entry(r) for r in rows],
-        cursor=_maybe_cursor(rows, limit),
+        cursor=maybe_cursor(rows, limit),
     )
 
 
@@ -268,12 +264,12 @@ async def list_schemas(
     cursor: str | None = Query(None),
 ) -> ListSchemasResponse:
     pool = request.app.state.db_pool
-    c_at, c_did, c_rkey = _parse_cursor(cursor)
+    c_at, c_did, c_rkey = parse_cursor(cursor)
     rows = await query_list_schemas(pool, repo, limit, c_did, c_rkey, c_at)
     fire_analytics_event(pool, "list_schemas", query_params={"repo": repo} if repo else None)
     return ListSchemasResponse(
         schemas=[row_to_schema(r) for r in rows],
-        cursor=_maybe_cursor(rows, limit),
+        cursor=maybe_cursor(rows, limit),
     )
 
 
@@ -287,14 +283,14 @@ async def list_lenses(
     cursor: str | None = Query(None),
 ) -> ListLensesResponse:
     pool = request.app.state.db_pool
-    c_at, c_did, c_rkey = _parse_cursor(cursor)
+    c_at, c_did, c_rkey = parse_cursor(cursor)
     rows = await query_list_lenses(
         pool, repo, sourceSchema, targetSchema, limit, c_did, c_rkey, c_at
     )
     fire_analytics_event(pool, "list_lenses", query_params={"repo": repo} if repo else None)
     return ListLensesResponse(
         lenses=[row_to_lens(r) for r in rows],
-        cursor=_maybe_cursor(rows, limit),
+        cursor=maybe_cursor(rows, limit),
     )
 
 
@@ -314,14 +310,14 @@ async def search_datasets(
     cursor: str | None = Query(None),
 ) -> SearchDatasetsResponse:
     pool = request.app.state.db_pool
-    c_at, c_did, c_rkey = _parse_cursor(cursor)
+    c_at, c_did, c_rkey = parse_cursor(cursor)
     rows = await query_search_datasets(
         pool, q, tags, schemaRef, repo, limit, c_did, c_rkey, c_at
     )
     fire_analytics_event(pool, "search", query_params={"q": q, "tags": tags})
     return SearchDatasetsResponse(
         entries=[row_to_entry(r) for r in rows],
-        cursor=_maybe_cursor(rows, limit),
+        cursor=maybe_cursor(rows, limit),
     )
 
 
@@ -334,13 +330,13 @@ async def search_lenses(
     cursor: str | None = Query(None),
 ) -> SearchLensesResponse:
     pool = request.app.state.db_pool
-    c_at, c_did, c_rkey = _parse_cursor(cursor)
+    c_at, c_did, c_rkey = parse_cursor(cursor)
     rows = await query_search_lenses(
         pool, sourceSchema, targetSchema, limit, c_did, c_rkey, c_at
     )
     return SearchLensesResponse(
         lenses=[row_to_lens(r) for r in rows],
-        cursor=_maybe_cursor(rows, limit),
+        cursor=maybe_cursor(rows, limit),
     )
 
 

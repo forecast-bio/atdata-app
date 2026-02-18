@@ -459,7 +459,7 @@ async def query_search_datasets(
     cursor_rkey: str | None = None,
     cursor_indexed_at: str | None = None,
 ) -> list[asyncpg.Record]:
-    conditions: list[str] = ["search_tsv @@ plainto_tsquery('english', $1)"]
+    conditions: list[str] = ["search_tsv @@ plainto_tsquery('english'::regconfig, $1)"]
     params: list[Any] = [q]
     idx = 2
 
@@ -491,7 +491,7 @@ async def query_search_datasets(
     async with pool.acquire() as conn:
         return await conn.fetch(
             f"""
-            SELECT *, ts_rank(search_tsv, plainto_tsquery('english', $1)) AS rank
+            SELECT *, ts_rank(search_tsv, plainto_tsquery('english'::regconfig, $1)) AS rank
             FROM entries {where}
             ORDER BY rank DESC, indexed_at DESC, did DESC, rkey DESC
             LIMIT ${idx}

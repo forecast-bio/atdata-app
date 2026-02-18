@@ -5,12 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.2.0b1] - 2026-02-17
+## [0.2.1b1] - 2026-02-17
 
 ### Security
-- Validate `lxm` claim in service auth JWT to prevent cross-endpoint token reuse (#18)
+
+- Validate `lxm` claim in service auth JWT to prevent cross-endpoint token reuse
 
 ### Added
+
+- PostgreSQL version matrix in CI (`schema-check` job testing against PG 15, 16, 17)
+
+### Fixed
+
+- Schema: use explicit `'english'::regconfig` cast in `search_tsv` generated column for PostgreSQL 17 compatibility
+- Fix `last_time_us` UnboundLocalError in Jetstream consumer on early cancellation
+- Return 400 instead of 500 for invalid AT-URIs in `getEntry`, `getEntries`, `getSchema`
+- Add missing database index on `labels.dataset_uri` for `query_labels_for_dataset`
+- Deduplicate cursor pagination helpers into `models.py`
+
+## [0.2.0b1] - 2026-02-17
+
+### Added
+
 - Server-rendered dataset browser frontend with Jinja2 templates, HTMX, and PicoCSS — home/search, dataset detail, schema detail, schemas list, publisher profile, and about pages
 - MCP (Model Context Protocol) server for agent-based dataset queries — exposes search, list, get, and describe tools for LLM agents (`mcp_server.py`)
 - `atdata-mcp` CLI entry point for running the MCP server
@@ -21,11 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - PyPI publish workflow via GitHub Actions with OIDC trusted publishing
 
 ### Fixed
-- Fix `last_time_us` UnboundLocalError in Jetstream consumer on early cancellation (#19)
-- Return 400 instead of 500 for invalid AT-URIs in `getEntry`, `getEntries`, `getSchema` (#19)
-- Add missing database index on `labels.dataset_uri` for `query_labels_for_dataset` (#21)
-- Deduplicate cursor pagination helpers into `models.py` (#20)
-- Strengthen `test_decode_cursor_invalid_base64` assertion from `Exception` to `ValueError` (#21)
+
 - Dockerfile: added `--no-editable` to `uv sync` so the package installs into `site-packages` instead of using a dangling `.pth` reference in the runtime stage
 
 ## [0.1.0b1] - 2026-02-16

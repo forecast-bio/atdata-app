@@ -75,7 +75,7 @@ wheels = [
 
 [[package]]
 name = "atdata-app"
-version = "0.2.0b1"
+version = "0.2.1b1"
 source = { editable = "." }
 dependencies = [
     { name = "asyncpg" },

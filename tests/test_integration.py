@@ -99,9 +99,9 @@ _SCHEMA_RECORD = {
 
 _ENTRY_RECORD = {
     "name": "Human Genome Variants",
-    "schemaRef": f"at://{_DID_ALICE}/ac.foundation.dataset.schema/com.example.genomics@1.0.0",
+    "schemaRef": f"at://{_DID_ALICE}/science.alt.dataset.schema/com.example.genomics@1.0.0",
     "storage": {
-        "$type": "ac.foundation.dataset.record#httpStorage",
+        "$type": "science.alt.dataset.record#httpStorage",
         "url": "https://example.com/data.parquet",
     },
     "description": "Comprehensive human genome variant dataset for ML research",
@@ -114,7 +114,7 @@ _ENTRY_RECORD = {
 
 _LABEL_RECORD = {
     "name": "v1-stable",
-    "datasetUri": f"at://{_DID_ALICE}/ac.foundation.dataset.record/3jqfcqzm3fp2k",
+    "datasetUri": f"at://{_DID_ALICE}/science.alt.dataset.record/3jqfcqzm3fp2k",
     "version": "1.0",
     "description": "First stable release",
     "createdAt": "2025-02-10T08:00:00Z",
@@ -122,8 +122,8 @@ _LABEL_RECORD = {
 
 _LENS_RECORD = {
     "name": "genomics-to-clinical",
-    "sourceSchema": f"at://{_DID_ALICE}/ac.foundation.dataset.schema/com.example.genomics@1.0.0",
-    "targetSchema": f"at://{_DID_BOB}/ac.foundation.dataset.schema/com.example.clinical@2.0.0",
+    "sourceSchema": f"at://{_DID_ALICE}/science.alt.dataset.schema/com.example.genomics@1.0.0",
+    "targetSchema": f"at://{_DID_BOB}/science.alt.dataset.schema/com.example.clinical@2.0.0",
     "getterCode": {
         "repository": "https://github.com/example/lenses",
         "commit": "abc123",
@@ -631,8 +631,8 @@ class TestQueryFunctions:
         await upsert_lens(db_pool, _DID_BOB, "3jqlens00002", "bafylens2", {
             **_LENS_RECORD,
             "name": "another-lens",
-            "sourceSchema": f"at://{_DID_BOB}/ac.foundation.dataset.schema/x@1.0.0",
-            "targetSchema": f"at://{_DID_BOB}/ac.foundation.dataset.schema/y@1.0.0",
+            "sourceSchema": f"at://{_DID_BOB}/science.alt.dataset.schema/x@1.0.0",
+            "targetSchema": f"at://{_DID_BOB}/science.alt.dataset.schema/y@1.0.0",
         })
 
         all_rows = await query_list_lenses(db_pool, limit=50)
@@ -688,7 +688,7 @@ class TestQueryFunctions:
     async def test_query_labels_for_dataset(self, db_pool):
         from atdata_app.database import query_labels_for_dataset, upsert_label
 
-        ds_uri = f"at://{_DID_ALICE}/ac.foundation.dataset.record/3jqfcqzm3fp2k"
+        ds_uri = f"at://{_DID_ALICE}/science.alt.dataset.record/3jqfcqzm3fp2k"
         await upsert_label(db_pool, _DID_ALICE, "3jqlbl001", "bafylbl1", {
             **_LABEL_RECORD,
             "datasetUri": ds_uri,
@@ -713,10 +713,10 @@ class TestQueryFunctions:
         await upsert_entry(db_pool, _DID_ALICE, "3jqentry00002", "bafye2", _ENTRY_RECORD)
 
         counts = await query_record_counts(db_pool)
-        assert counts["ac.foundation.dataset.schema"] == 1
-        assert counts["ac.foundation.dataset.record"] == 2
-        assert counts["ac.foundation.dataset.label"] == 0
-        assert counts["ac.foundation.dataset.lens"] == 0
+        assert counts["science.alt.dataset.schema"] == 1
+        assert counts["science.alt.dataset.record"] == 2
+        assert counts["science.alt.dataset.label"] == 0
+        assert counts["science.alt.dataset.lens"] == 0
 
     async def test_query_record_exists(self, db_pool):
         from atdata_app.database import query_record_exists, upsert_entry
@@ -836,9 +836,9 @@ class TestSearchLenses:
     async def _seed_lenses(self, db_pool):
         from atdata_app.database import upsert_lens
 
-        src_a = f"at://{_DID_ALICE}/ac.foundation.dataset.schema/a@1.0.0"
-        src_b = f"at://{_DID_ALICE}/ac.foundation.dataset.schema/b@1.0.0"
-        tgt_c = f"at://{_DID_BOB}/ac.foundation.dataset.schema/c@1.0.0"
+        src_a = f"at://{_DID_ALICE}/science.alt.dataset.schema/a@1.0.0"
+        src_b = f"at://{_DID_ALICE}/science.alt.dataset.schema/b@1.0.0"
+        tgt_c = f"at://{_DID_BOB}/science.alt.dataset.schema/c@1.0.0"
 
         await upsert_lens(db_pool, _DID_ALICE, "3jqlens001", "bafyl1", {
             **_LENS_RECORD,
@@ -862,7 +862,7 @@ class TestSearchLenses:
         from atdata_app.database import query_search_lenses
 
         await self._seed_lenses(db_pool)
-        src = f"at://{_DID_ALICE}/ac.foundation.dataset.schema/a@1.0.0"
+        src = f"at://{_DID_ALICE}/science.alt.dataset.schema/a@1.0.0"
         rows = await query_search_lenses(db_pool, source_schema=src, limit=50)
         assert len(rows) == 1
 
@@ -870,8 +870,8 @@ class TestSearchLenses:
         from atdata_app.database import query_search_lenses
 
         await self._seed_lenses(db_pool)
-        src = f"at://{_DID_ALICE}/ac.foundation.dataset.schema/a@1.0.0"
-        tgt = f"at://{_DID_BOB}/ac.foundation.dataset.schema/c@1.0.0"
+        src = f"at://{_DID_ALICE}/science.alt.dataset.schema/a@1.0.0"
+        tgt = f"at://{_DID_BOB}/science.alt.dataset.schema/c@1.0.0"
         rows = await query_search_lenses(
             db_pool, source_schema=src, target_schema=tgt, limit=50
         )
@@ -987,7 +987,7 @@ class TestAnalytics:
         assert summary["topDatasets"][0]["did"] == _DID_ALICE
         assert len(summary["topSearchTerms"]) >= 1
         assert summary["topSearchTerms"][0]["term"] == "genomics"
-        assert "ac.foundation.dataset.record" in summary["recordCounts"]
+        assert "science.alt.dataset.record" in summary["recordCounts"]
 
     async def test_query_entry_stats(self, db_pool):
         from atdata_app.database import query_entry_stats, record_analytics_event
@@ -1060,8 +1060,8 @@ class TestEdgeCases:
 
         minimal_record = {
             "name": "Bare Minimum Dataset",
-            "schemaRef": f"at://{_DID_ALICE}/ac.foundation.dataset.schema/s@1.0.0",
-            "storage": {"$type": "ac.foundation.dataset.record#httpStorage"},
+            "schemaRef": f"at://{_DID_ALICE}/science.alt.dataset.schema/s@1.0.0",
+            "storage": {"$type": "science.alt.dataset.record#httpStorage"},
             "createdAt": "2025-01-01T00:00:00Z",
         }
         await upsert_entry(db_pool, _DID_ALICE, "3jqbare00001", "bafybare", minimal_record)

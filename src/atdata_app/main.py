@@ -6,7 +6,8 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from atdata_app.config import AppConfig
@@ -19,6 +20,9 @@ from atdata_app.ingestion.jetstream import jetstream_consumer
 from atdata_app.xrpc.router import router as xrpc_router
 
 logger = logging.getLogger(__name__)
+
+# Paths served on both hostnames (everything else is frontend-only)
+_SHARED_PATH_PREFIXES = ("/xrpc/", "/.well-known/", "/health")
 
 
 @asynccontextmanager
@@ -52,6 +56,21 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
     app = FastAPI(title="atdata AppView", version="0.1.0", lifespan=lifespan)
     app.state.config = config
+
+    # Middleware: block frontend routes on the API hostname
+    @app.middleware("http")
+    async def gate_frontend_routes(request: Request, call_next) -> Response:
+        cfg: AppConfig = request.app.state.config
+        if cfg.frontend_hostname:
+            host = request.headers.get("host", "").split(":")[0]
+            path = request.url.path
+            if host != cfg.frontend_hostname and not path.startswith(
+                _SHARED_PATH_PREFIXES
+            ):
+                return JSONResponse(
+                    status_code=404, content={"detail": "Not Found"}
+                )
+        return await call_next(request)
 
     # Routes
     app.add_api_route("/.well-known/did.json", did_json_handler, methods=["GET"])

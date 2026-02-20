@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-ATProto AppView for the `ac.foundation.dataset` lexicon namespace. An AppView is a read-heavy service in the AT Protocol architecture that indexes records from the network firehose and serves them via XRPC endpoints. This one indexes dataset metadata — schemas, dataset entries, labels, and lenses (bidirectional schema transforms).
+ATProto AppView for the `science.alt.dataset` lexicon namespace. An AppView is a read-heavy service in the AT Protocol architecture that indexes records from the network firehose and serves them via XRPC endpoints. This one indexes dataset metadata — schemas, dataset entries, labels, and lenses (bidirectional schema transforms).
 
 ## Commands
 
@@ -45,10 +45,10 @@ Every record type maps to a database table via `database.COLLECTION_TABLE_MAP`:
 
 | Collection | Table | Record key format |
 |---|---|---|
-| `ac.foundation.dataset.schema` | `schemas` | `{NSID}@{semver}` |
-| `ac.foundation.dataset.record` | `entries` | TID |
-| `ac.foundation.dataset.label` | `labels` | TID |
-| `ac.foundation.dataset.lens` | `lenses` | TID |
+| `science.alt.dataset.schema` | `schemas` | `{NSID}@{semver}` |
+| `science.alt.dataset.record` | `entries` | TID |
+| `science.alt.dataset.label` | `labels` | TID |
+| `science.alt.dataset.lens` | `lenses` | TID |
 
 Each has a corresponding `upsert_*` function in `database.py`, a `row_to_*` serializer in `models.py`, and a `publish*` procedure in `xrpc/procedures.py`.
 
@@ -62,7 +62,7 @@ Each has a corresponding `upsert_*` function in `database.py`, a `row_to_*` seri
 
 ### XRPC Endpoints
 
-All mounted under `/xrpc/` via `xrpc/router.py`. Queries are GET, procedures are POST. Endpoint names follow the lexicon NSID pattern (e.g., `/xrpc/ac.foundation.dataset.listEntries`).
+All mounted under `/xrpc/` via `xrpc/router.py`. Queries are GET, procedures are POST. Endpoint names follow the lexicon NSID pattern (e.g., `/xrpc/science.alt.dataset.listEntries`).
 
 ## Environment Variables
 

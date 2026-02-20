@@ -66,7 +66,7 @@ def maybe_cursor(rows: list, limit: int) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def row_to_entry(row, collection: str = "ac.foundation.dataset.record") -> dict[str, Any]:
+def row_to_entry(row, collection: str = "science.alt.dataset.record") -> dict[str, Any]:
     uri = make_at_uri(row["did"], collection, row["rkey"])
     storage = row["storage"]
     if isinstance(storage, str):
@@ -102,7 +102,7 @@ def row_to_entry(row, collection: str = "ac.foundation.dataset.record") -> dict[
 
 
 def row_to_schema(row) -> dict[str, Any]:
-    uri = make_at_uri(row["did"], "ac.foundation.dataset.schema", row["rkey"])
+    uri = make_at_uri(row["did"], "science.alt.dataset.schema", row["rkey"])
     schema_body = row["schema_body"]
     if isinstance(schema_body, str):
         schema_body = json.loads(schema_body)
@@ -123,7 +123,7 @@ def row_to_schema(row) -> dict[str, Any]:
 
 
 def row_to_label(row) -> dict[str, Any]:
-    uri = make_at_uri(row["did"], "ac.foundation.dataset.label", row["rkey"])
+    uri = make_at_uri(row["did"], "science.alt.dataset.label", row["rkey"])
     d: dict[str, Any] = {
         "uri": uri,
         "cid": row["cid"],
@@ -139,7 +139,7 @@ def row_to_label(row) -> dict[str, Any]:
 
 
 def row_to_lens(row) -> dict[str, Any]:
-    uri = make_at_uri(row["did"], "ac.foundation.dataset.lens", row["rkey"])
+    uri = make_at_uri(row["did"], "science.alt.dataset.lens", row["rkey"])
     getter_code = row["getter_code"]
     putter_code = row["putter_code"]
     if isinstance(getter_code, str):

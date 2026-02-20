@@ -54,7 +54,7 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[ServerContext]:
 mcp_server = FastMCP(
     "atdata",
     instructions=(
-        "ATProto AppView for the ac.foundation.dataset namespace. "
+        "ATProto AppView for the science.alt.dataset namespace. "
         "Use these tools to discover and query scientific datasets, "
         "schemas, and lenses (bidirectional schema transforms) published "
         "on the AT Protocol network."
@@ -106,7 +106,7 @@ async def get_dataset(ctx: Ctx, uri: str) -> dict[str, Any]:
     """Fetch a single dataset entry by its AT-URI.
 
     Args:
-        uri: AT-URI of the dataset (e.g. at://did:plc:abc/ac.foundation.dataset.record/3xyz).
+        uri: AT-URI of the dataset (e.g. at://did:plc:abc/science.alt.dataset.record/3xyz).
 
     Returns:
         Full dataset metadata including name, description, schema ref, storage, tags, and size.
@@ -124,7 +124,7 @@ async def get_schema(ctx: Ctx, uri: str) -> dict[str, Any]:
     """Fetch a schema definition by its AT-URI.
 
     Args:
-        uri: AT-URI of the schema (e.g. at://did:plc:abc/ac.foundation.dataset.schema/my.schema@1.0.0).
+        uri: AT-URI of the schema (e.g. at://did:plc:abc/science.alt.dataset.schema/my.schema@1.0.0).
 
     Returns:
         Full schema record including name, version, type, schema body, and description.

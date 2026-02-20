@@ -28,8 +28,8 @@ _ENTRY_ROW = {
     "rkey": "3xyz",
     "cid": "bafyentry",
     "name": "test-dataset",
-    "schema_ref": "at://did:plc:abc/ac.foundation.dataset.schema/s@1.0.0",
-    "storage": {"$type": "ac.foundation.dataset.storageHttp", "url": "https://example.com"},
+    "schema_ref": "at://did:plc:abc/science.alt.dataset.schema/s@1.0.0",
+    "storage": {"$type": "science.alt.dataset.storageHttp", "url": "https://example.com"},
     "description": "A test dataset",
     "tags": ["ml", "nlp"],
     "license": "MIT",
@@ -56,8 +56,8 @@ _LENS_ROW = {
     "rkey": "3lens",
     "cid": "bafylens",
     "name": "a-to-b",
-    "source_schema": "at://did:plc:abc/ac.foundation.dataset.schema/a@1.0.0",
-    "target_schema": "at://did:plc:abc/ac.foundation.dataset.schema/b@1.0.0",
+    "source_schema": "at://did:plc:abc/science.alt.dataset.schema/a@1.0.0",
+    "target_schema": "at://did:plc:abc/science.alt.dataset.schema/b@1.0.0",
     "getter_code": {"repo": "https://github.com/test/repo", "path": "get.py"},
     "putter_code": {"repo": "https://github.com/test/repo", "path": "put.py"},
     "description": "Transforms A to B",
@@ -96,7 +96,7 @@ async def test_search_datasets_returns_entries(mock_query):
     mock_query.assert_called_once_with(pool, "test", None, None, None, 10)
     assert len(result) == 1
     assert result[0]["name"] == "test-dataset"
-    assert result[0]["uri"] == "at://did:plc:abc/ac.foundation.dataset.record/3xyz"
+    assert result[0]["uri"] == "at://did:plc:abc/science.alt.dataset.record/3xyz"
 
 
 @pytest.mark.asyncio
@@ -110,7 +110,7 @@ async def test_search_datasets_with_filters(mock_query):
         ctx,
         query="genomics",
         tags=["bio"],
-        schema_ref="at://did:plc:x/ac.foundation.dataset.schema/s@1.0.0",
+        schema_ref="at://did:plc:x/science.alt.dataset.schema/s@1.0.0",
         repo="did:plc:x",
         limit=5,
     )
@@ -119,7 +119,7 @@ async def test_search_datasets_with_filters(mock_query):
         pool,
         "genomics",
         ["bio"],
-        "at://did:plc:x/ac.foundation.dataset.schema/s@1.0.0",
+        "at://did:plc:x/science.alt.dataset.schema/s@1.0.0",
         "did:plc:x",
         5,
     )
@@ -153,7 +153,7 @@ async def test_get_dataset_found(mock_query):
     ctx = _make_ctx(pool)
 
     result = await get_dataset(
-        ctx, uri="at://did:plc:abc/ac.foundation.dataset.record/3xyz"
+        ctx, uri="at://did:plc:abc/science.alt.dataset.record/3xyz"
     )
 
     mock_query.assert_called_once_with(pool, "did:plc:abc", "3xyz")
@@ -169,7 +169,7 @@ async def test_get_dataset_not_found(mock_query):
     ctx = _make_ctx(pool)
 
     result = await get_dataset(
-        ctx, uri="at://did:plc:abc/ac.foundation.dataset.record/missing"
+        ctx, uri="at://did:plc:abc/science.alt.dataset.record/missing"
     )
 
     assert result["error"] == "Dataset not found"
@@ -188,7 +188,7 @@ async def test_get_schema_found(mock_query):
     ctx = _make_ctx(pool)
 
     result = await get_schema(
-        ctx, uri="at://did:plc:abc/ac.foundation.dataset.schema/my.schema@1.0.0"
+        ctx, uri="at://did:plc:abc/science.alt.dataset.schema/my.schema@1.0.0"
     )
 
     mock_query.assert_called_once_with(pool, "did:plc:abc", "my.schema@1.0.0")
@@ -204,7 +204,7 @@ async def test_get_schema_not_found(mock_query):
     ctx = _make_ctx(pool)
 
     result = await get_schema(
-        ctx, uri="at://did:plc:abc/ac.foundation.dataset.schema/missing@1.0.0"
+        ctx, uri="at://did:plc:abc/science.alt.dataset.schema/missing@1.0.0"
     )
 
     assert result["error"] == "Schema not found"
@@ -281,15 +281,15 @@ async def test_search_lenses_with_filters(mock_query):
 
     await search_lenses(
         ctx,
-        source_schema="at://did:plc:abc/ac.foundation.dataset.schema/a@1.0.0",
-        target_schema="at://did:plc:abc/ac.foundation.dataset.schema/b@1.0.0",
+        source_schema="at://did:plc:abc/science.alt.dataset.schema/a@1.0.0",
+        target_schema="at://did:plc:abc/science.alt.dataset.schema/b@1.0.0",
         limit=5,
     )
 
     mock_query.assert_called_once_with(
         pool,
-        "at://did:plc:abc/ac.foundation.dataset.schema/a@1.0.0",
-        "at://did:plc:abc/ac.foundation.dataset.schema/b@1.0.0",
+        "at://did:plc:abc/science.alt.dataset.schema/a@1.0.0",
+        "at://did:plc:abc/science.alt.dataset.schema/b@1.0.0",
         5,
     )
 
@@ -314,10 +314,10 @@ async def test_search_lenses_clamps_limit(mock_query):
 @patch(f"{_DB}.query_record_counts", new_callable=AsyncMock)
 async def test_describe_service(mock_counts):
     mock_counts.return_value = {
-        "ac.foundation.dataset.schema": 10,
-        "ac.foundation.dataset.record": 50,
-        "ac.foundation.dataset.label": 30,
-        "ac.foundation.dataset.lens": 5,
+        "science.alt.dataset.schema": 10,
+        "science.alt.dataset.record": 50,
+        "science.alt.dataset.label": 30,
+        "science.alt.dataset.lens": 5,
     }
     pool = AsyncMock()
     ctx = _make_ctx(pool)
@@ -325,5 +325,5 @@ async def test_describe_service(mock_counts):
     result = await describe_service(ctx)
 
     assert result["did"].startswith("did:web:")
-    assert "ac.foundation.dataset.record" in result["availableCollections"]
-    assert result["recordCount"]["ac.foundation.dataset.record"] == 50
+    assert "science.alt.dataset.record" in result["availableCollections"]
+    assert result["recordCount"]["science.alt.dataset.record"] == 50

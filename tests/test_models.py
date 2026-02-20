@@ -22,9 +22,9 @@ from atdata_app.models import (
 
 
 def test_parse_at_uri():
-    did, collection, rkey = parse_at_uri("at://did:plc:abc123/ac.foundation.dataset.record/3xyz")
+    did, collection, rkey = parse_at_uri("at://did:plc:abc123/science.alt.dataset.record/3xyz")
     assert did == "did:plc:abc123"
-    assert collection == "ac.foundation.dataset.record"
+    assert collection == "science.alt.dataset.record"
     assert rkey == "3xyz"
 
 
@@ -39,12 +39,12 @@ def test_parse_at_uri_too_few_parts():
 
 
 def test_make_at_uri():
-    uri = make_at_uri("did:plc:abc", "ac.foundation.dataset.record", "rkey1")
-    assert uri == "at://did:plc:abc/ac.foundation.dataset.record/rkey1"
+    uri = make_at_uri("did:plc:abc", "science.alt.dataset.record", "rkey1")
+    assert uri == "at://did:plc:abc/science.alt.dataset.record/rkey1"
 
 
 def test_parse_make_roundtrip():
-    uri = "at://did:plc:abc/ac.foundation.dataset.record/rkey1"
+    uri = "at://did:plc:abc/science.alt.dataset.record/rkey1"
     assert make_at_uri(*parse_at_uri(uri)) == uri
 
 
@@ -82,8 +82,8 @@ _ENTRY_ROW_FULL = {
     "rkey": "3xyz",
     "cid": "bafyfull",
     "name": "test-ds",
-    "schema_ref": "at://did:plc:abc/ac.foundation.dataset.schema/s@1.0.0",
-    "storage": {"$type": "ac.foundation.dataset.storageHttp", "url": "https://example.com"},
+    "schema_ref": "at://did:plc:abc/science.alt.dataset.schema/s@1.0.0",
+    "storage": {"$type": "science.alt.dataset.storageHttp", "url": "https://example.com"},
     "description": "A dataset",
     "tags": ["ml", "nlp"],
     "license": "MIT",
@@ -98,8 +98,8 @@ _ENTRY_ROW_MINIMAL = {
     "rkey": "3xyz",
     "cid": "bafymin",
     "name": "bare-ds",
-    "schema_ref": "at://did:plc:abc/ac.foundation.dataset.schema/s@1.0.0",
-    "storage": {"$type": "ac.foundation.dataset.storageHttp"},
+    "schema_ref": "at://did:plc:abc/science.alt.dataset.schema/s@1.0.0",
+    "storage": {"$type": "science.alt.dataset.storageHttp"},
     "description": None,
     "tags": None,
     "license": None,
@@ -112,7 +112,7 @@ _ENTRY_ROW_MINIMAL = {
 
 def test_row_to_entry_full():
     d = row_to_entry(_ENTRY_ROW_FULL)
-    assert d["uri"] == "at://did:plc:abc/ac.foundation.dataset.record/3xyz"
+    assert d["uri"] == "at://did:plc:abc/science.alt.dataset.record/3xyz"
     assert d["schemaRef"] == _ENTRY_ROW_FULL["schema_ref"]
     assert d["description"] == "A dataset"
     assert d["tags"] == ["ml", "nlp"]
@@ -122,7 +122,7 @@ def test_row_to_entry_full():
 
 def test_row_to_entry_minimal_omits_optional_fields():
     d = row_to_entry(_ENTRY_ROW_MINIMAL)
-    assert d["uri"] == "at://did:plc:abc/ac.foundation.dataset.record/3xyz"
+    assert d["uri"] == "at://did:plc:abc/science.alt.dataset.record/3xyz"
     assert "description" not in d
     assert "tags" not in d
     assert "license" not in d
@@ -131,10 +131,10 @@ def test_row_to_entry_minimal_omits_optional_fields():
 
 def test_row_to_entry_json_string_storage():
     """asyncpg may return JSONB as a string; row_to_entry should parse it."""
-    row = {**_ENTRY_ROW_MINIMAL, "storage": '{"$type": "ac.foundation.dataset.storageHttp"}'}
+    row = {**_ENTRY_ROW_MINIMAL, "storage": '{"$type": "science.alt.dataset.storageHttp"}'}
     d = row_to_entry(row)
     assert isinstance(d["storage"], dict)
-    assert d["storage"]["$type"] == "ac.foundation.dataset.storageHttp"
+    assert d["storage"]["$type"] == "science.alt.dataset.storageHttp"
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +156,7 @@ _SCHEMA_ROW = {
 
 def test_row_to_schema():
     d = row_to_schema(_SCHEMA_ROW)
-    assert d["uri"] == "at://did:plc:abc/ac.foundation.dataset.schema/my.schema@1.0.0"
+    assert d["uri"] == "at://did:plc:abc/science.alt.dataset.schema/my.schema@1.0.0"
     assert d["schemaType"] == "jsonSchema"
     assert d["schema"] == {"type": "object", "properties": {}}
     assert d["description"] == "A schema"
@@ -183,7 +183,7 @@ _LABEL_ROW = {
     "rkey": "3lbl",
     "cid": "bafylabel",
     "name": "v1",
-    "dataset_uri": "at://did:plc:abc/ac.foundation.dataset.record/3xyz",
+    "dataset_uri": "at://did:plc:abc/science.alt.dataset.record/3xyz",
     "version": "1.0.0",
     "description": "First version",
     "created_at": "2025-01-01T00:00:00Z",
@@ -192,7 +192,7 @@ _LABEL_ROW = {
 
 def test_row_to_label():
     d = row_to_label(_LABEL_ROW)
-    assert d["uri"] == "at://did:plc:abc/ac.foundation.dataset.label/3lbl"
+    assert d["uri"] == "at://did:plc:abc/science.alt.dataset.label/3lbl"
     assert d["datasetUri"] == _LABEL_ROW["dataset_uri"]
     assert d["version"] == "1.0.0"
     assert d["description"] == "First version"
@@ -214,8 +214,8 @@ _LENS_ROW = {
     "rkey": "3lens",
     "cid": "bafylens",
     "name": "a-to-b",
-    "source_schema": "at://did:plc:abc/ac.foundation.dataset.schema/a@1.0.0",
-    "target_schema": "at://did:plc:abc/ac.foundation.dataset.schema/b@1.0.0",
+    "source_schema": "at://did:plc:abc/science.alt.dataset.schema/a@1.0.0",
+    "target_schema": "at://did:plc:abc/science.alt.dataset.schema/b@1.0.0",
     "getter_code": {"repo": "https://github.com/test/repo", "path": "get.py"},
     "putter_code": {"repo": "https://github.com/test/repo", "path": "put.py"},
     "description": "Transforms A to B",
@@ -226,7 +226,7 @@ _LENS_ROW = {
 
 def test_row_to_lens():
     d = row_to_lens(_LENS_ROW)
-    assert d["uri"] == "at://did:plc:abc/ac.foundation.dataset.lens/3lens"
+    assert d["uri"] == "at://did:plc:abc/science.alt.dataset.lens/3lens"
     assert d["sourceSchema"] == _LENS_ROW["source_schema"]
     assert d["getterCode"] == _LENS_ROW["getter_code"]
     assert d["description"] == "Transforms A to B"

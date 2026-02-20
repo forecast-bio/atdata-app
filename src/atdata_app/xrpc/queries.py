@@ -68,7 +68,7 @@ async def _resolve_handle(handle: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/ac.foundation.dataset.resolveLabel")
+@router.get("/science.alt.dataset.resolveLabel")
 async def resolve_label(
     request: Request,
     handle: str = Query(...),
@@ -94,7 +94,7 @@ async def resolve_label(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/ac.foundation.dataset.resolveSchema")
+@router.get("/science.alt.dataset.resolveSchema")
 async def resolve_schema(
     request: Request,
     handle: str = Query(...),
@@ -120,7 +120,7 @@ async def resolve_schema(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/ac.foundation.dataset.resolveBlobs")
+@router.get("/science.alt.dataset.resolveBlobs")
 async def resolve_blobs(
     request: Request,
     uris: list[str] = Query(..., max_length=25),
@@ -176,7 +176,7 @@ async def resolve_blobs(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/ac.foundation.dataset.getEntry")
+@router.get("/science.alt.dataset.getEntry")
 async def get_entry(
     request: Request,
     uri: str = Query(...),
@@ -193,7 +193,7 @@ async def get_entry(
     return GetEntryResponse(entry=row_to_entry(row))
 
 
-@router.get("/ac.foundation.dataset.getEntries")
+@router.get("/science.alt.dataset.getEntries")
 async def get_entries(
     request: Request,
     uris: list[str] = Query(..., max_length=25),
@@ -217,7 +217,7 @@ async def get_entries(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/ac.foundation.dataset.getSchema")
+@router.get("/science.alt.dataset.getSchema")
 async def get_schema(
     request: Request,
     uri: str = Query(...),
@@ -239,7 +239,7 @@ async def get_schema(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/ac.foundation.dataset.listEntries")
+@router.get("/science.alt.dataset.listEntries")
 async def list_entries(
     request: Request,
     repo: str | None = Query(None),
@@ -256,7 +256,7 @@ async def list_entries(
     )
 
 
-@router.get("/ac.foundation.dataset.listSchemas")
+@router.get("/science.alt.dataset.listSchemas")
 async def list_schemas(
     request: Request,
     repo: str | None = Query(None),
@@ -273,7 +273,7 @@ async def list_schemas(
     )
 
 
-@router.get("/ac.foundation.dataset.listLenses")
+@router.get("/science.alt.dataset.listLenses")
 async def list_lenses(
     request: Request,
     repo: str | None = Query(None),
@@ -299,7 +299,7 @@ async def list_lenses(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/ac.foundation.dataset.searchDatasets")
+@router.get("/science.alt.dataset.searchDatasets")
 async def search_datasets(
     request: Request,
     q: str = Query(...),
@@ -321,7 +321,7 @@ async def search_datasets(
     )
 
 
-@router.get("/ac.foundation.dataset.searchLenses")
+@router.get("/science.alt.dataset.searchLenses")
 async def search_lenses(
     request: Request,
     sourceSchema: str | None = Query(None),
@@ -345,7 +345,7 @@ async def search_lenses(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/ac.foundation.dataset.describeService")
+@router.get("/science.alt.dataset.describeService")
 async def describe_service(request: Request) -> DescribeServiceResponse:
     config = request.app.state.config
     pool = request.app.state.db_pool
@@ -373,7 +373,7 @@ async def describe_service(request: Request) -> DescribeServiceResponse:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/ac.foundation.dataset.getAnalytics")
+@router.get("/science.alt.dataset.getAnalytics")
 async def get_analytics(
     request: Request,
     period: str = Query("week", pattern="^(day|week|month)$"),
@@ -388,7 +388,7 @@ async def get_analytics(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/ac.foundation.dataset.getEntryStats")
+@router.get("/science.alt.dataset.getEntryStats")
 async def get_entry_stats(
     request: Request,
     uri: str = Query(...),

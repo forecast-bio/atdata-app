@@ -13,7 +13,7 @@ import asyncpg
 
 logger = logging.getLogger(__name__)
 
-LEXICON_NAMESPACE = "ac.foundation.dataset"
+LEXICON_NAMESPACE = "science.alt.dataset"
 
 COLLECTION_TABLE_MAP: dict[str, str] = {
     f"{LEXICON_NAMESPACE}.schema": "schemas",
@@ -665,7 +665,7 @@ async def query_analytics_summary(
         )
         top_datasets = [
             {
-                "uri": f"at://{r['target_did']}/ac.foundation.dataset.record/{r['target_rkey']}",
+                "uri": f"at://{r['target_did']}/science.alt.dataset.record/{r['target_rkey']}",
                 "did": r["target_did"],
                 "rkey": r["target_rkey"],
                 "name": r["name"] or "",

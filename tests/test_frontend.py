@@ -22,8 +22,8 @@ def _make_entry_row(
         "rkey": rkey,
         "cid": "bafytest",
         "name": name,
-        "schema_ref": "at://did:plc:test/ac.foundation.dataset.schema/test@1.0.0",
-        "storage": '{"$type": "ac.foundation.dataset.storageHttp", "shards": []}',
+        "schema_ref": "at://did:plc:test/science.alt.dataset.schema/test@1.0.0",
+        "storage": '{"$type": "science.alt.dataset.storageHttp", "shards": []}',
         "description": description,
         "tags": tags or ["ml", "test"],
         "license": "MIT",
@@ -67,7 +67,7 @@ def _make_label_row(
         "rkey": rkey,
         "cid": "bafylabel",
         "name": name,
-        "dataset_uri": "at://did:plc:test123/ac.foundation.dataset.record/3xyz",
+        "dataset_uri": "at://did:plc:test123/science.alt.dataset.record/3xyz",
         "version": "1.0",
         "description": "First version",
         "created_at": "2025-01-01T00:00:00Z",
@@ -246,10 +246,10 @@ async def test_profile(mock_entries, mock_schemas):
 async def test_about(mock_counts):
     pool, _conn = _mock_pool()
     mock_counts.return_value = {
-        "ac.foundation.dataset.schema": 5,
-        "ac.foundation.dataset.record": 10,
-        "ac.foundation.dataset.label": 3,
-        "ac.foundation.dataset.lens": 1,
+        "science.alt.dataset.schema": 5,
+        "science.alt.dataset.record": 10,
+        "science.alt.dataset.label": 3,
+        "science.alt.dataset.lens": 1,
     }
     app = _make_app(pool)
     transport = ASGITransport(app=app)

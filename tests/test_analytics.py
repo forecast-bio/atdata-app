@@ -127,7 +127,7 @@ async def test_get_analytics_endpoint(mock_fire, mock_summary, config, pool):
         "totalSearches": 25,
         "topDatasets": [
             {
-                "uri": "at://did:plc:abc/ac.foundation.dataset.record/3xyz",
+                "uri": "at://did:plc:abc/science.alt.dataset.record/3xyz",
                 "did": "did:plc:abc",
                 "rkey": "3xyz",
                 "name": "test-ds",
@@ -136,17 +136,17 @@ async def test_get_analytics_endpoint(mock_fire, mock_summary, config, pool):
         ],
         "topSearchTerms": [{"term": "genomics", "count": 10}],
         "recordCounts": {
-            "ac.foundation.dataset.schema": 5,
-            "ac.foundation.dataset.record": 20,
-            "ac.foundation.dataset.label": 10,
-            "ac.foundation.dataset.lens": 3,
+            "science.alt.dataset.schema": 5,
+            "science.alt.dataset.record": 20,
+            "science.alt.dataset.label": 10,
+            "science.alt.dataset.lens": 3,
         },
     }
 
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/xrpc/ac.foundation.dataset.getAnalytics", params={"period": "week"})
+        resp = await client.get("/xrpc/science.alt.dataset.getAnalytics", params={"period": "week"})
 
     assert resp.status_code == 200
     data = resp.json()
@@ -155,7 +155,7 @@ async def test_get_analytics_endpoint(mock_fire, mock_summary, config, pool):
     assert len(data["topDatasets"]) == 1
     assert data["topDatasets"][0]["name"] == "test-ds"
     assert len(data["topSearchTerms"]) == 1
-    assert data["recordCounts"]["ac.foundation.dataset.record"] == 20
+    assert data["recordCounts"]["science.alt.dataset.record"] == 20
 
 
 @pytest.mark.asyncio
@@ -173,7 +173,7 @@ async def test_get_analytics_default_period(mock_fire, mock_summary, config, poo
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/xrpc/ac.foundation.dataset.getAnalytics")
+        resp = await client.get("/xrpc/science.alt.dataset.getAnalytics")
 
     assert resp.status_code == 200
     mock_summary.assert_called_once_with(pool, "week")
@@ -185,7 +185,7 @@ async def test_get_analytics_invalid_period(mock_fire, config, pool):
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/xrpc/ac.foundation.dataset.getAnalytics", params={"period": "year"})
+        resp = await client.get("/xrpc/science.alt.dataset.getAnalytics", params={"period": "year"})
 
     assert resp.status_code == 422
 
@@ -209,8 +209,8 @@ async def test_get_entry_stats_endpoint(mock_fire, mock_stats, config, pool):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get(
-            "/xrpc/ac.foundation.dataset.getEntryStats",
-            params={"uri": "at://did:plc:abc/ac.foundation.dataset.record/3xyz"},
+            "/xrpc/science.alt.dataset.getEntryStats",
+            params={"uri": "at://did:plc:abc/science.alt.dataset.record/3xyz"},
         )
 
     assert resp.status_code == 200
@@ -227,7 +227,7 @@ async def test_get_entry_stats_invalid_uri(mock_fire, config, pool):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get(
-            "/xrpc/ac.foundation.dataset.getEntryStats",
+            "/xrpc/science.alt.dataset.getEntryStats",
             params={"uri": "https://bad-uri"},
         )
 
@@ -248,10 +248,10 @@ async def test_describe_service_includes_analytics(
     mock_fire, mock_counts, mock_summary, mock_publishers, config, pool
 ):
     mock_counts.return_value = {
-        "ac.foundation.dataset.schema": 5,
-        "ac.foundation.dataset.record": 20,
-        "ac.foundation.dataset.label": 10,
-        "ac.foundation.dataset.lens": 3,
+        "science.alt.dataset.schema": 5,
+        "science.alt.dataset.record": 20,
+        "science.alt.dataset.label": 10,
+        "science.alt.dataset.lens": 3,
     }
     mock_summary.return_value = {
         "totalViews": 200,
@@ -265,7 +265,7 @@ async def test_describe_service_includes_analytics(
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/xrpc/ac.foundation.dataset.describeService")
+        resp = await client.get("/xrpc/science.alt.dataset.describeService")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -289,8 +289,8 @@ async def test_get_entry_fires_analytics(mock_query, mock_fire, config, pool):
         "rkey": "3xyz",
         "cid": "bafytest",
         "name": "test-ds",
-        "schema_ref": "at://did:plc:abc/ac.foundation.dataset.schema/s@1.0.0",
-        "storage": {"$type": "ac.foundation.dataset.storageHttp"},
+        "schema_ref": "at://did:plc:abc/science.alt.dataset.schema/s@1.0.0",
+        "storage": {"$type": "science.alt.dataset.storageHttp"},
         "description": None,
         "tags": None,
         "license": None,
@@ -304,8 +304,8 @@ async def test_get_entry_fires_analytics(mock_query, mock_fire, config, pool):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get(
-            "/xrpc/ac.foundation.dataset.getEntry",
-            params={"uri": "at://did:plc:abc/ac.foundation.dataset.record/3xyz"},
+            "/xrpc/science.alt.dataset.getEntry",
+            params={"uri": "at://did:plc:abc/science.alt.dataset.record/3xyz"},
         )
 
     assert resp.status_code == 200
@@ -324,7 +324,7 @@ async def test_search_datasets_fires_analytics(mock_query, mock_fire, config, po
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get(
-            "/xrpc/ac.foundation.dataset.searchDatasets",
+            "/xrpc/science.alt.dataset.searchDatasets",
             params={"q": "genomics"},
         )
 
@@ -345,7 +345,7 @@ def test_get_analytics_response_model():
         totalSearches=25,
         topDatasets=[{"uri": "at://test", "views": 10}],
         topSearchTerms=[{"term": "ml", "count": 5}],
-        recordCounts={"ac.foundation.dataset.record": 20},
+        recordCounts={"science.alt.dataset.record": 20},
     )
     assert resp.totalViews == 100
     assert resp.totalSearches == 25
@@ -360,8 +360,8 @@ def test_get_entry_stats_response_model():
 def test_describe_service_response_with_analytics():
     resp = DescribeServiceResponse(
         did="did:web:localhost%3A8000",
-        availableCollections=["ac.foundation.dataset.record"],
-        recordCount={"ac.foundation.dataset.record": 10},
+        availableCollections=["science.alt.dataset.record"],
+        recordCount={"science.alt.dataset.record": 10},
         analytics={"totalViews": 50, "totalSearches": 10, "activePublishers": 3},
     )
     assert resp.analytics["totalViews"] == 50
@@ -370,7 +370,7 @@ def test_describe_service_response_with_analytics():
 def test_describe_service_response_without_analytics():
     resp = DescribeServiceResponse(
         did="did:web:localhost%3A8000",
-        availableCollections=["ac.foundation.dataset.record"],
-        recordCount={"ac.foundation.dataset.record": 10},
+        availableCollections=["science.alt.dataset.record"],
+        recordCount={"science.alt.dataset.record": 10},
     )
     assert resp.analytics is None

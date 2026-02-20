@@ -15,6 +15,12 @@ class AppConfig(BaseSettings):
     hostname: str = "localhost"
     port: int = 8000
     dev_mode: bool = True
+    signing_key: str | None = None
+
+    # Frontend identity (optional — enables dual-hostname mode)
+    frontend_hostname: str | None = None
+    frontend_signing_key: str | None = None
+    pds_endpoint: str | None = None
 
     # Database
     database_url: str = "postgresql://localhost:5432/atdata_app"
@@ -37,3 +43,15 @@ class AppConfig(BaseSettings):
         if self.dev_mode:
             return f"http://{self.hostname}:{self.port}"
         return f"https://{self.hostname}"
+
+    @cached_property
+    def frontend_did(self) -> str | None:
+        if not self.frontend_hostname:
+            return None
+        return f"did:web:{self.frontend_hostname}"
+
+    @cached_property
+    def frontend_endpoint(self) -> str | None:
+        if not self.frontend_hostname:
+            return None
+        return f"https://{self.frontend_hostname}"

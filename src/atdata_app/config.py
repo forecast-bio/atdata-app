@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from functools import cached_property
+from typing import Self
 from urllib.parse import quote
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +23,14 @@ class AppConfig(BaseSettings):
     frontend_hostname: str | None = None
     frontend_signing_key: str | None = None
     pds_endpoint: str | None = None
+
+    @model_validator(mode="after")
+    def _check_frontend_config(self) -> Self:
+        if self.frontend_hostname and not self.pds_endpoint:
+            raise ValueError(
+                "ATDATA_PDS_ENDPOINT is required when ATDATA_FRONTEND_HOSTNAME is set"
+            )
+        return self
 
     # Database
     database_url: str = "postgresql://localhost:5432/atdata_app"

@@ -228,6 +228,7 @@ async def test_api_hostname_blocks_frontend_routes():
         dev_mode=False,
         hostname="api.atdata.app",
         frontend_hostname="atdata.app",
+        pds_endpoint="https://pds.foundation.ac",
     )
     app = _make_full_app(config)
 
@@ -246,6 +247,7 @@ async def test_api_hostname_allows_shared_routes():
         dev_mode=False,
         hostname="api.atdata.app",
         frontend_hostname="atdata.app",
+        pds_endpoint="https://pds.foundation.ac",
     )
     app = _make_full_app(config)
 
@@ -316,6 +318,7 @@ def test_frontend_did_property():
         dev_mode=False,
         hostname="api.atdata.app",
         frontend_hostname="atdata.app",
+        pds_endpoint="https://pds.foundation.ac",
     )
     assert config.frontend_did == "did:web:atdata.app"
     assert config.frontend_endpoint == "https://atdata.app"

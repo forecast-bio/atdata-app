@@ -1,5 +1,7 @@
 """Tests for AppConfig."""
 
+import pytest
+
 from atdata_app.config import AppConfig
 
 
@@ -21,3 +23,12 @@ def test_service_endpoint_dev():
 def test_service_endpoint_prod():
     config = AppConfig(dev_mode=False, hostname="datasets.atdata.blue")
     assert config.service_endpoint == "https://datasets.atdata.blue"
+
+
+def test_frontend_hostname_requires_pds_endpoint():
+    with pytest.raises(ValueError, match="ATDATA_PDS_ENDPOINT is required"):
+        AppConfig(
+            dev_mode=False,
+            hostname="api.atdata.app",
+            frontend_hostname="atdata.app",
+        )

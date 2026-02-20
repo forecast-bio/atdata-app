@@ -1,6 +1,6 @@
 [project]
 name = "atdata-app"
-version = "0.2.2b1"
+version = "0.2.3b1"
 description = "ATProto AppView for science.alt.dataset"
 readme = "README.md"
 authors = [

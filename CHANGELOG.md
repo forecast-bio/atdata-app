@@ -57,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.1.0b1] - 2026-02-16
 
-First beta release of the ATProto AppView for `ac.foundation.dataset`.
+First beta release of the ATProto AppView for `science.alt.dataset`.
 
 ### Added
 

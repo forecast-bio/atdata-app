@@ -14,7 +14,7 @@ _DB = "atdata_app.database"
 
 def _make_event(
     did: str = "did:plc:test123",
-    collection: str = "ac.foundation.dataset.record",
+    collection: str = "science.alt.dataset.record",
     operation: str = "create",
     rkey: str = "3xyz",
     record: dict | None = None,
@@ -30,8 +30,8 @@ def _make_event(
         commit["record"] = record or {
             "$type": collection,
             "name": "test-dataset",
-            "schemaRef": "at://did:plc:test/ac.foundation.dataset.schema/test@1.0.0",
-            "storage": {"$type": "ac.foundation.dataset.storageHttp", "shards": []},
+            "schemaRef": "at://did:plc:test/science.alt.dataset.schema/test@1.0.0",
+            "storage": {"$type": "science.alt.dataset.storageHttp", "shards": []},
             "createdAt": "2025-01-01T00:00:00Z",
         }
         commit["cid"] = cid
@@ -76,13 +76,13 @@ async def test_process_commit_delete(mock_delete):
 async def test_process_commit_schema(mock_upsert):
     pool = AsyncMock()
     event = _make_event(
-        collection="ac.foundation.dataset.schema",
+        collection="science.alt.dataset.schema",
         record={
-            "$type": "ac.foundation.dataset.schema",
+            "$type": "science.alt.dataset.schema",
             "name": "TestSchema",
             "version": "1.0.0",
             "schemaType": "jsonSchema",
-            "schema": {"$type": "ac.foundation.dataset.schema#jsonSchemaFormat"},
+            "schema": {"$type": "science.alt.dataset.schema#jsonSchemaFormat"},
             "createdAt": "2025-01-01T00:00:00Z",
         },
     )
@@ -97,11 +97,11 @@ async def test_process_commit_schema(mock_upsert):
 async def test_process_commit_label(mock_upsert):
     pool = AsyncMock()
     event = _make_event(
-        collection="ac.foundation.dataset.label",
+        collection="science.alt.dataset.label",
         record={
-            "$type": "ac.foundation.dataset.label",
+            "$type": "science.alt.dataset.label",
             "name": "mnist",
-            "datasetUri": "at://did:plc:test/ac.foundation.dataset.record/3xyz",
+            "datasetUri": "at://did:plc:test/science.alt.dataset.record/3xyz",
             "createdAt": "2025-01-01T00:00:00Z",
         },
     )
@@ -116,12 +116,12 @@ async def test_process_commit_label(mock_upsert):
 async def test_process_commit_lens(mock_upsert):
     pool = AsyncMock()
     event = _make_event(
-        collection="ac.foundation.dataset.lens",
+        collection="science.alt.dataset.lens",
         record={
-            "$type": "ac.foundation.dataset.lens",
+            "$type": "science.alt.dataset.lens",
             "name": "test-lens",
-            "sourceSchema": "at://did:plc:test/ac.foundation.dataset.schema/a@1.0.0",
-            "targetSchema": "at://did:plc:test/ac.foundation.dataset.schema/b@1.0.0",
+            "sourceSchema": "at://did:plc:test/science.alt.dataset.schema/a@1.0.0",
+            "targetSchema": "at://did:plc:test/science.alt.dataset.schema/b@1.0.0",
             "getterCode": {"repository": "https://github.com/test/repo", "commit": "abc", "path": "get.py"},
             "putterCode": {"repository": "https://github.com/test/repo", "commit": "abc", "path": "put.py"},
             "createdAt": "2025-01-01T00:00:00Z",

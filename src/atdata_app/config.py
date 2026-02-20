@@ -21,7 +21,7 @@ class AppConfig(BaseSettings):
 
     # Jetstream
     jetstream_url: str = "wss://jetstream2.us-east.bsky.network/subscribe"
-    jetstream_collections: str = "ac.foundation.dataset.*"
+    jetstream_collections: str = "science.alt.dataset.*"
 
     # Relay (for backfill)
     relay_host: str = "https://bsky.network"

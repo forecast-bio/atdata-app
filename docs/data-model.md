@@ -1,6 +1,6 @@
 # Data Model
 
-Four tables indexed from the `ac.foundation.dataset.*` namespace, plus cursor state for firehose crash recovery. All tables use `(did, rkey)` as composite primary key. Schema auto-applies on startup.
+Four tables indexed from the `science.alt.dataset.*` namespace, plus cursor state for firehose crash recovery. All tables use `(did, rkey)` as composite primary key. Schema auto-applies on startup.
 
 ## schemas
 

@@ -1,4 +1,4 @@
-"""ATProto AppView for ac.foundation.dataset namespace."""
+"""ATProto AppView for science.alt.dataset namespace."""
 
 from __future__ import annotations
 

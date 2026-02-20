@@ -1,5 +1,5 @@
 -- atdata-app database schema
--- All ac.foundation.dataset.* record types + cursor state
+-- All science.alt.dataset.* record types + cursor state
 
 -- Immutable wrapper for array_to_string(text[], text).
 -- PostgreSQL marks array_to_string as STABLE because the generic anyarray
@@ -11,7 +11,7 @@ RETURNS TEXT LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
     SELECT array_to_string(arr, sep)
 $$;
 
--- Schemas (ac.foundation.dataset.schema)
+-- Schemas (science.alt.dataset.schema)
 -- rkey format: {NSID}@{semver}
 CREATE TABLE IF NOT EXISTS schemas (
     did         TEXT NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS schemas (
 CREATE INDEX IF NOT EXISTS idx_schemas_name ON schemas (name);
 CREATE INDEX IF NOT EXISTS idx_schemas_did ON schemas (did);
 
--- Dataset entries (ac.foundation.dataset.record)
+-- Dataset entries (science.alt.dataset.record)
 -- rkey format: TID
 CREATE TABLE IF NOT EXISTS entries (
     did                 TEXT NOT NULL,
@@ -82,7 +82,7 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS idx_entries_search ON entries USING GIN (search_tsv);
 
--- Labels (ac.foundation.dataset.label)
+-- Labels (science.alt.dataset.label)
 CREATE TABLE IF NOT EXISTS labels (
     did         TEXT NOT NULL,
     rkey        TEXT NOT NULL,
@@ -100,7 +100,7 @@ CREATE INDEX IF NOT EXISTS idx_labels_name ON labels (did, name);
 CREATE INDEX IF NOT EXISTS idx_labels_did ON labels (did);
 CREATE INDEX IF NOT EXISTS idx_labels_dataset_uri ON labels (dataset_uri);
 
--- Lenses (ac.foundation.dataset.lens)
+-- Lenses (science.alt.dataset.lens)
 CREATE TABLE IF NOT EXISTS lenses (
     did              TEXT NOT NULL,
     rkey             TEXT NOT NULL,

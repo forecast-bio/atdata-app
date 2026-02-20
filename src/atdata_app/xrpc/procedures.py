@@ -81,9 +81,9 @@ def _require_pds_token(request: Request) -> str:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/ac.foundation.dataset.publishSchema")
+@router.post("/science.alt.dataset.publishSchema")
 async def publish_schema(request: Request) -> dict[str, Any]:
-    auth = await verify_service_auth(request, "ac.foundation.dataset.publishSchema")
+    auth = await verify_service_auth(request, "science.alt.dataset.publishSchema")
     pds_token = _require_pds_token(request)
     pool = request.app.state.db_pool
 
@@ -93,7 +93,7 @@ async def publish_schema(request: Request) -> dict[str, Any]:
 
     # Validate $type
     record_type = record.get("$type", "")
-    if record_type and record_type != "ac.foundation.dataset.schema":
+    if record_type and record_type != "science.alt.dataset.schema":
         raise HTTPException(status_code=400, detail="Invalid $type for schema")
 
     # Validate required fields
@@ -111,12 +111,12 @@ async def publish_schema(request: Request) -> dict[str, Any]:
             )
 
     # Ensure $type is set
-    record["$type"] = "ac.foundation.dataset.schema"
+    record["$type"] = "science.alt.dataset.schema"
 
     # Proxy to PDS
     pds = await _resolve_pds(auth.iss)
     result = await _proxy_create_record(
-        pds, pds_token, auth.iss, "ac.foundation.dataset.schema", record, rkey
+        pds, pds_token, auth.iss, "science.alt.dataset.schema", record, rkey
     )
     return {"uri": result.get("uri"), "cid": result.get("cid")}
 
@@ -126,9 +126,9 @@ async def publish_schema(request: Request) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/ac.foundation.dataset.publishDataset")
+@router.post("/science.alt.dataset.publishDataset")
 async def publish_dataset(request: Request) -> dict[str, Any]:
-    auth = await verify_service_auth(request, "ac.foundation.dataset.publishDataset")
+    auth = await verify_service_auth(request, "science.alt.dataset.publishDataset")
     pds_token = _require_pds_token(request)
     pool = request.app.state.db_pool
 
@@ -137,7 +137,7 @@ async def publish_dataset(request: Request) -> dict[str, Any]:
     rkey = body.get("rkey")
 
     record_type = record.get("$type", "")
-    if record_type and record_type != "ac.foundation.dataset.record":
+    if record_type and record_type != "science.alt.dataset.record":
         raise HTTPException(status_code=400, detail="Invalid $type for dataset")
 
     for field in ("name", "schemaRef", "storage", "createdAt"):
@@ -160,9 +160,9 @@ async def publish_dataset(request: Request) -> dict[str, Any]:
     # Validate storage $type
     storage = record.get("storage", {})
     valid_storage_types = {
-        "ac.foundation.dataset.storageHttp",
-        "ac.foundation.dataset.storageS3",
-        "ac.foundation.dataset.storageBlobs",
+        "science.alt.dataset.storageHttp",
+        "science.alt.dataset.storageS3",
+        "science.alt.dataset.storageBlobs",
     }
     if storage.get("$type") not in valid_storage_types:
         raise HTTPException(
@@ -170,11 +170,11 @@ async def publish_dataset(request: Request) -> dict[str, Any]:
             detail=f"Invalid storage $type: {storage.get('$type')}",
         )
 
-    record["$type"] = "ac.foundation.dataset.record"
+    record["$type"] = "science.alt.dataset.record"
 
     pds = await _resolve_pds(auth.iss)
     result = await _proxy_create_record(
-        pds, pds_token, auth.iss, "ac.foundation.dataset.record", record, rkey
+        pds, pds_token, auth.iss, "science.alt.dataset.record", record, rkey
     )
     return {"uri": result.get("uri"), "cid": result.get("cid")}
 
@@ -184,9 +184,9 @@ async def publish_dataset(request: Request) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/ac.foundation.dataset.publishLabel")
+@router.post("/science.alt.dataset.publishLabel")
 async def publish_label(request: Request) -> dict[str, Any]:
-    auth = await verify_service_auth(request, "ac.foundation.dataset.publishLabel")
+    auth = await verify_service_auth(request, "science.alt.dataset.publishLabel")
     pds_token = _require_pds_token(request)
     pool = request.app.state.db_pool
 
@@ -195,7 +195,7 @@ async def publish_label(request: Request) -> dict[str, Any]:
     rkey = body.get("rkey")
 
     record_type = record.get("$type", "")
-    if record_type and record_type != "ac.foundation.dataset.label":
+    if record_type and record_type != "science.alt.dataset.label":
         raise HTTPException(status_code=400, detail="Invalid $type for label")
 
     for field in ("name", "datasetUri", "createdAt"):
@@ -215,11 +215,11 @@ async def publish_label(request: Request) -> dict[str, Any]:
             detail=f"Referenced dataset not found: {ds_uri}",
         )
 
-    record["$type"] = "ac.foundation.dataset.label"
+    record["$type"] = "science.alt.dataset.label"
 
     pds = await _resolve_pds(auth.iss)
     result = await _proxy_create_record(
-        pds, pds_token, auth.iss, "ac.foundation.dataset.label", record, rkey
+        pds, pds_token, auth.iss, "science.alt.dataset.label", record, rkey
     )
     return {"uri": result.get("uri"), "cid": result.get("cid")}
 
@@ -229,9 +229,9 @@ async def publish_label(request: Request) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/ac.foundation.dataset.publishLens")
+@router.post("/science.alt.dataset.publishLens")
 async def publish_lens(request: Request) -> dict[str, Any]:
-    auth = await verify_service_auth(request, "ac.foundation.dataset.publishLens")
+    auth = await verify_service_auth(request, "science.alt.dataset.publishLens")
     pds_token = _require_pds_token(request)
     pool = request.app.state.db_pool
 
@@ -240,7 +240,7 @@ async def publish_lens(request: Request) -> dict[str, Any]:
     rkey = body.get("rkey")
 
     record_type = record.get("$type", "")
-    if record_type and record_type != "ac.foundation.dataset.lens":
+    if record_type and record_type != "science.alt.dataset.lens":
         raise HTTPException(status_code=400, detail="Invalid $type for lens")
 
     for field in ("name", "sourceSchema", "targetSchema", "getterCode", "putterCode", "createdAt"):
@@ -261,10 +261,10 @@ async def publish_lens(request: Request) -> dict[str, Any]:
                 detail=f"Referenced schema not found: {uri}",
             )
 
-    record["$type"] = "ac.foundation.dataset.lens"
+    record["$type"] = "science.alt.dataset.lens"
 
     pds = await _resolve_pds(auth.iss)
     result = await _proxy_create_record(
-        pds, pds_token, auth.iss, "ac.foundation.dataset.lens", record, rkey
+        pds, pds_token, auth.iss, "science.alt.dataset.lens", record, rkey
     )
     return {"uri": result.get("uri"), "cid": result.get("cid")}

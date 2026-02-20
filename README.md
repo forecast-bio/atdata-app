@@ -1,6 +1,6 @@
 # atdata-app
 
-An [ATProto AppView](https://atproto.com/guides/applications#appview) for the `ac.foundation.dataset` lexicon namespace. It indexes dataset metadata published across the AT Protocol network and serves it through XRPC endpoints — enabling discovery, search, and resolution of datasets, schemas, labels, and lenses.
+An [ATProto AppView](https://atproto.com/guides/applications#appview) for the `science.alt.dataset` lexicon namespace. It indexes dataset metadata published across the AT Protocol network and serves it through XRPC endpoints — enabling discovery, search, and resolution of datasets, schemas, labels, and lenses.
 
 ## Overview
 
@@ -44,7 +44,7 @@ createdb atdata_app
 uv run uvicorn atdata_app.main:app --reload
 ```
 
-The server starts with dev-mode defaults: `http://localhost:8000`, DID `did:web:localhost%3A8000`. On startup it connects to Jetstream and begins indexing `ac.foundation.dataset.*` records, and runs a one-shot backfill of historical records from the BGS relay.
+The server starts with dev-mode defaults: `http://localhost:8000`, DID `did:web:localhost%3A8000`. On startup it connects to Jetstream and begins indexing `science.alt.dataset.*` records, and runs a one-shot backfill of historical records from the BGS relay.
 
 ## Configuration
 
@@ -57,7 +57,7 @@ All settings are environment variables prefixed with `ATDATA_`, managed by [pyda
 | `ATDATA_DEV_MODE` | `true` | Dev mode uses `http://` and includes port in DID; production uses `https://` |
 | `ATDATA_DATABASE_URL` | `postgresql://localhost:5432/atdata_app` | PostgreSQL connection string |
 | `ATDATA_JETSTREAM_URL` | `wss://jetstream2.us-east.bsky.network/subscribe` | Jetstream WebSocket endpoint |
-| `ATDATA_JETSTREAM_COLLECTIONS` | `ac.foundation.dataset.*` | Collections to subscribe to |
+| `ATDATA_JETSTREAM_COLLECTIONS` | `science.alt.dataset.*` | Collections to subscribe to |
 | `ATDATA_RELAY_HOST` | `https://bsky.network` | BGS relay for backfill DID discovery |
 
 ### Identity

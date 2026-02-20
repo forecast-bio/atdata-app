@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.3b1] - 2026-02-20
+
+### Changed
+
+- **Breaking**: Rename lexicon namespace from `ac.foundation.dataset.*` to `science.alt.dataset.*` across all XRPC endpoints, firehose filters, SQL schema, and configuration ([#17](https://github.com/forecast-bio/atdata-app/issues/17))
+- DID document service entry updated from `#atproto_appview` / `AtprotoAppView` to `#atdata_appview` / `AtdataAppView`
+
+### Added
+
+- Dual-hostname DID document support — serve different `did:web` documents for `api.atdata.app` (appview identity) and `atdata.app` (atproto account identity) based on the `Host` header ([#19](https://github.com/forecast-bio/atdata-app/issues/19))
+- Host-based route gating middleware — frontend HTML routes are only served on the frontend hostname; the API subdomain serves only XRPC, health, and DID endpoints
+- Optional `verificationMethod` (Multikey) in DID documents when signing keys are configured
+- New config vars: `ATDATA_FRONTEND_HOSTNAME`, `ATDATA_PDS_ENDPOINT`, `ATDATA_SIGNING_KEY`, `ATDATA_FRONTEND_SIGNING_KEY`
+- Startup validation requiring `ATDATA_PDS_ENDPOINT` when `ATDATA_FRONTEND_HOSTNAME` is set
+
 ## [0.2.2b1] - 2026-02-18
 
 ### Added

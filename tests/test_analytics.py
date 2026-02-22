@@ -127,7 +127,7 @@ async def test_get_analytics_endpoint(mock_fire, mock_summary, config, pool):
         "totalSearches": 25,
         "topDatasets": [
             {
-                "uri": "at://did:plc:abc/science.alt.dataset.record/3xyz",
+                "uri": "at://did:plc:abc/science.alt.dataset.entry/3xyz",
                 "did": "did:plc:abc",
                 "rkey": "3xyz",
                 "name": "test-ds",
@@ -137,7 +137,7 @@ async def test_get_analytics_endpoint(mock_fire, mock_summary, config, pool):
         "topSearchTerms": [{"term": "genomics", "count": 10}],
         "recordCounts": {
             "science.alt.dataset.schema": 5,
-            "science.alt.dataset.record": 20,
+            "science.alt.dataset.entry": 20,
             "science.alt.dataset.label": 10,
             "science.alt.dataset.lens": 3,
         },
@@ -155,7 +155,7 @@ async def test_get_analytics_endpoint(mock_fire, mock_summary, config, pool):
     assert len(data["topDatasets"]) == 1
     assert data["topDatasets"][0]["name"] == "test-ds"
     assert len(data["topSearchTerms"]) == 1
-    assert data["recordCounts"]["science.alt.dataset.record"] == 20
+    assert data["recordCounts"]["science.alt.dataset.entry"] == 20
 
 
 @pytest.mark.asyncio
@@ -210,7 +210,7 @@ async def test_get_entry_stats_endpoint(mock_fire, mock_stats, config, pool):
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get(
             "/xrpc/science.alt.dataset.getEntryStats",
-            params={"uri": "at://did:plc:abc/science.alt.dataset.record/3xyz"},
+            params={"uri": "at://did:plc:abc/science.alt.dataset.entry/3xyz"},
         )
 
     assert resp.status_code == 200
@@ -249,7 +249,7 @@ async def test_describe_service_includes_analytics(
 ):
     mock_counts.return_value = {
         "science.alt.dataset.schema": 5,
-        "science.alt.dataset.record": 20,
+        "science.alt.dataset.entry": 20,
         "science.alt.dataset.label": 10,
         "science.alt.dataset.lens": 3,
     }
@@ -305,7 +305,7 @@ async def test_get_entry_fires_analytics(mock_query, mock_fire, config, pool):
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get(
             "/xrpc/science.alt.dataset.getEntry",
-            params={"uri": "at://did:plc:abc/science.alt.dataset.record/3xyz"},
+            params={"uri": "at://did:plc:abc/science.alt.dataset.entry/3xyz"},
         )
 
     assert resp.status_code == 200
@@ -345,7 +345,7 @@ def test_get_analytics_response_model():
         totalSearches=25,
         topDatasets=[{"uri": "at://test", "views": 10}],
         topSearchTerms=[{"term": "ml", "count": 5}],
-        recordCounts={"science.alt.dataset.record": 20},
+        recordCounts={"science.alt.dataset.entry": 20},
     )
     assert resp.totalViews == 100
     assert resp.totalSearches == 25
@@ -360,8 +360,8 @@ def test_get_entry_stats_response_model():
 def test_describe_service_response_with_analytics():
     resp = DescribeServiceResponse(
         did="did:web:localhost%3A8000",
-        availableCollections=["science.alt.dataset.record"],
-        recordCount={"science.alt.dataset.record": 10},
+        availableCollections=["science.alt.dataset.entry"],
+        recordCount={"science.alt.dataset.entry": 10},
         analytics={"totalViews": 50, "totalSearches": 10, "activePublishers": 3},
     )
     assert resp.analytics["totalViews"] == 50
@@ -370,7 +370,7 @@ def test_describe_service_response_with_analytics():
 def test_describe_service_response_without_analytics():
     resp = DescribeServiceResponse(
         did="did:web:localhost%3A8000",
-        availableCollections=["science.alt.dataset.record"],
-        recordCount={"science.alt.dataset.record": 10},
+        availableCollections=["science.alt.dataset.entry"],
+        recordCount={"science.alt.dataset.entry": 10},
     )
     assert resp.analytics is None

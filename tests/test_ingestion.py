@@ -14,7 +14,7 @@ _DB = "atdata_app.database"
 
 def _make_event(
     did: str = "did:plc:test123",
-    collection: str = "science.alt.dataset.record",
+    collection: str = "science.alt.dataset.entry",
     operation: str = "create",
     rkey: str = "3xyz",
     record: dict | None = None,
@@ -101,7 +101,7 @@ async def test_process_commit_label(mock_upsert):
         record={
             "$type": "science.alt.dataset.label",
             "name": "mnist",
-            "datasetUri": "at://did:plc:test/science.alt.dataset.record/3xyz",
+            "datasetUri": "at://did:plc:test/science.alt.dataset.entry/3xyz",
             "createdAt": "2025-01-01T00:00:00Z",
         },
     )

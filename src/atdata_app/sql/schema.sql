@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS schemas (
 CREATE INDEX IF NOT EXISTS idx_schemas_name ON schemas (name);
 CREATE INDEX IF NOT EXISTS idx_schemas_did ON schemas (did);
 
--- Dataset entries (science.alt.dataset.record)
+-- Dataset entries (science.alt.dataset.entry)
 -- rkey format: TID
 CREATE TABLE IF NOT EXISTS entries (
     did                 TEXT NOT NULL,

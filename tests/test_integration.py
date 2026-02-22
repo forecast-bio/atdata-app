@@ -101,7 +101,7 @@ _ENTRY_RECORD = {
     "name": "Human Genome Variants",
     "schemaRef": f"at://{_DID_ALICE}/science.alt.dataset.schema/com.example.genomics@1.0.0",
     "storage": {
-        "$type": "science.alt.dataset.record#httpStorage",
+        "$type": "science.alt.dataset.entry#httpStorage",
         "url": "https://example.com/data.parquet",
     },
     "description": "Comprehensive human genome variant dataset for ML research",
@@ -114,7 +114,7 @@ _ENTRY_RECORD = {
 
 _LABEL_RECORD = {
     "name": "v1-stable",
-    "datasetUri": f"at://{_DID_ALICE}/science.alt.dataset.record/3jqfcqzm3fp2k",
+    "datasetUri": f"at://{_DID_ALICE}/science.alt.dataset.entry/3jqfcqzm3fp2k",
     "version": "1.0",
     "description": "First stable release",
     "createdAt": "2025-02-10T08:00:00Z",
@@ -688,7 +688,7 @@ class TestQueryFunctions:
     async def test_query_labels_for_dataset(self, db_pool):
         from atdata_app.database import query_labels_for_dataset, upsert_label
 
-        ds_uri = f"at://{_DID_ALICE}/science.alt.dataset.record/3jqfcqzm3fp2k"
+        ds_uri = f"at://{_DID_ALICE}/science.alt.dataset.entry/3jqfcqzm3fp2k"
         await upsert_label(db_pool, _DID_ALICE, "3jqlbl001", "bafylbl1", {
             **_LABEL_RECORD,
             "datasetUri": ds_uri,
@@ -714,7 +714,7 @@ class TestQueryFunctions:
 
         counts = await query_record_counts(db_pool)
         assert counts["science.alt.dataset.schema"] == 1
-        assert counts["science.alt.dataset.record"] == 2
+        assert counts["science.alt.dataset.entry"] == 2
         assert counts["science.alt.dataset.label"] == 0
         assert counts["science.alt.dataset.lens"] == 0
 
@@ -987,7 +987,7 @@ class TestAnalytics:
         assert summary["topDatasets"][0]["did"] == _DID_ALICE
         assert len(summary["topSearchTerms"]) >= 1
         assert summary["topSearchTerms"][0]["term"] == "genomics"
-        assert "science.alt.dataset.record" in summary["recordCounts"]
+        assert "science.alt.dataset.entry" in summary["recordCounts"]
 
     async def test_query_entry_stats(self, db_pool):
         from atdata_app.database import query_entry_stats, record_analytics_event
@@ -1061,7 +1061,7 @@ class TestEdgeCases:
         minimal_record = {
             "name": "Bare Minimum Dataset",
             "schemaRef": f"at://{_DID_ALICE}/science.alt.dataset.schema/s@1.0.0",
-            "storage": {"$type": "science.alt.dataset.record#httpStorage"},
+            "storage": {"$type": "science.alt.dataset.entry#httpStorage"},
             "createdAt": "2025-01-01T00:00:00Z",
         }
         await upsert_entry(db_pool, _DID_ALICE, "3jqbare00001", "bafybare", minimal_record)

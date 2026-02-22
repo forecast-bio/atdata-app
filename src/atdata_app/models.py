@@ -66,7 +66,7 @@ def maybe_cursor(rows: list, limit: int) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def row_to_entry(row, collection: str = "science.alt.dataset.record") -> dict[str, Any]:
+def row_to_entry(row, collection: str = "science.alt.dataset.entry") -> dict[str, Any]:
     uri = make_at_uri(row["did"], collection, row["rkey"])
     storage = row["storage"]
     if isinstance(storage, str):

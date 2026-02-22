@@ -24,7 +24,7 @@ async def process_commit(pool: asyncpg.Pool, event: dict[str, Any]) -> None:
             "commit": {
                 "rev": "...",
                 "operation": "create" | "update" | "delete",
-                "collection": "science.alt.dataset.record",
+                "collection": "science.alt.dataset.entry",
                 "rkey": "...",
                 "record": { ... },
                 "cid": "..."

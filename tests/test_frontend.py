@@ -67,7 +67,7 @@ def _make_label_row(
         "rkey": rkey,
         "cid": "bafylabel",
         "name": name,
-        "dataset_uri": "at://did:plc:test123/science.alt.dataset.record/3xyz",
+        "dataset_uri": "at://did:plc:test123/science.alt.dataset.entry/3xyz",
         "version": "1.0",
         "description": "First version",
         "created_at": "2025-01-01T00:00:00Z",
@@ -247,7 +247,7 @@ async def test_about(mock_counts):
     pool, _conn = _mock_pool()
     mock_counts.return_value = {
         "science.alt.dataset.schema": 5,
-        "science.alt.dataset.record": 10,
+        "science.alt.dataset.entry": 10,
         "science.alt.dataset.label": 3,
         "science.alt.dataset.lens": 1,
     }

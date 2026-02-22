@@ -22,9 +22,9 @@ from atdata_app.models import (
 
 
 def test_parse_at_uri():
-    did, collection, rkey = parse_at_uri("at://did:plc:abc123/science.alt.dataset.record/3xyz")
+    did, collection, rkey = parse_at_uri("at://did:plc:abc123/science.alt.dataset.entry/3xyz")
     assert did == "did:plc:abc123"
-    assert collection == "science.alt.dataset.record"
+    assert collection == "science.alt.dataset.entry"
     assert rkey == "3xyz"
 
 
@@ -39,12 +39,12 @@ def test_parse_at_uri_too_few_parts():
 
 
 def test_make_at_uri():
-    uri = make_at_uri("did:plc:abc", "science.alt.dataset.record", "rkey1")
-    assert uri == "at://did:plc:abc/science.alt.dataset.record/rkey1"
+    uri = make_at_uri("did:plc:abc", "science.alt.dataset.entry", "rkey1")
+    assert uri == "at://did:plc:abc/science.alt.dataset.entry/rkey1"
 
 
 def test_parse_make_roundtrip():
-    uri = "at://did:plc:abc/science.alt.dataset.record/rkey1"
+    uri = "at://did:plc:abc/science.alt.dataset.entry/rkey1"
     assert make_at_uri(*parse_at_uri(uri)) == uri
 
 
@@ -112,7 +112,7 @@ _ENTRY_ROW_MINIMAL = {
 
 def test_row_to_entry_full():
     d = row_to_entry(_ENTRY_ROW_FULL)
-    assert d["uri"] == "at://did:plc:abc/science.alt.dataset.record/3xyz"
+    assert d["uri"] == "at://did:plc:abc/science.alt.dataset.entry/3xyz"
     assert d["schemaRef"] == _ENTRY_ROW_FULL["schema_ref"]
     assert d["description"] == "A dataset"
     assert d["tags"] == ["ml", "nlp"]
@@ -122,7 +122,7 @@ def test_row_to_entry_full():
 
 def test_row_to_entry_minimal_omits_optional_fields():
     d = row_to_entry(_ENTRY_ROW_MINIMAL)
-    assert d["uri"] == "at://did:plc:abc/science.alt.dataset.record/3xyz"
+    assert d["uri"] == "at://did:plc:abc/science.alt.dataset.entry/3xyz"
     assert "description" not in d
     assert "tags" not in d
     assert "license" not in d
@@ -183,7 +183,7 @@ _LABEL_ROW = {
     "rkey": "3lbl",
     "cid": "bafylabel",
     "name": "v1",
-    "dataset_uri": "at://did:plc:abc/science.alt.dataset.record/3xyz",
+    "dataset_uri": "at://did:plc:abc/science.alt.dataset.entry/3xyz",
     "version": "1.0.0",
     "description": "First version",
     "created_at": "2025-01-01T00:00:00Z",

@@ -77,7 +77,7 @@ jobs:
           INSERT INTO entries (did, rkey, name, schema_ref, storage, created_at)
           VALUES ('did:plc:test', '3jqfcqzm3fp2k', 'Test Dataset',
                   'at://did:plc:test/science.alt.dataset.schema/com.example.test@1.0.0',
-                  '{"$type": "science.alt.dataset.record#httpStorage", "url": "https://example.com/data.csv"}'::jsonb,
+                  '{"$type": "science.alt.dataset.entry#httpStorage", "url": "https://example.com/data.csv"}'::jsonb,
                   '2024-01-01T00:00:00Z');
 
           SELECT name FROM entries WHERE search_tsv @@ plainto_tsquery('english'::regconfig, 'Test');

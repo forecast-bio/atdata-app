@@ -106,7 +106,7 @@ async def get_dataset(ctx: Ctx, uri: str) -> dict[str, Any]:
     """Fetch a single dataset entry by its AT-URI.
 
     Args:
-        uri: AT-URI of the dataset (e.g. at://did:plc:abc/science.alt.dataset.record/3xyz).
+        uri: AT-URI of the dataset (e.g. at://did:plc:abc/science.alt.dataset.entry/3xyz).
 
     Returns:
         Full dataset metadata including name, description, schema ref, storage, tags, and size.

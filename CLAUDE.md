@@ -46,7 +46,7 @@ Every record type maps to a database table via `database.COLLECTION_TABLE_MAP`:
 | Collection | Table | Record key format |
 |---|---|---|
 | `science.alt.dataset.schema` | `schemas` | `{NSID}@{semver}` |
-| `science.alt.dataset.record` | `entries` | TID |
+| `science.alt.dataset.entry` | `entries` | TID |
 | `science.alt.dataset.label` | `labels` | TID |
 | `science.alt.dataset.lens` | `lenses` | TID |
 

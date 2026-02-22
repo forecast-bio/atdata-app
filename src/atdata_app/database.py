@@ -17,7 +17,7 @@ LEXICON_NAMESPACE = "science.alt.dataset"
 
 COLLECTION_TABLE_MAP: dict[str, str] = {
     f"{LEXICON_NAMESPACE}.schema": "schemas",
-    f"{LEXICON_NAMESPACE}.record": "entries",
+    f"{LEXICON_NAMESPACE}.entry": "entries",
     f"{LEXICON_NAMESPACE}.label": "labels",
     f"{LEXICON_NAMESPACE}.lens": "lenses",
 }
@@ -665,7 +665,7 @@ async def query_analytics_summary(
         )
         top_datasets = [
             {
-                "uri": f"at://{r['target_did']}/science.alt.dataset.record/{r['target_rkey']}",
+                "uri": f"at://{r['target_did']}/science.alt.dataset.entry/{r['target_rkey']}",
                 "did": r["target_did"],
                 "rkey": r["target_rkey"],
                 "name": r["name"] or "",

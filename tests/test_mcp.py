@@ -96,7 +96,7 @@ async def test_search_datasets_returns_entries(mock_query):
     mock_query.assert_called_once_with(pool, "test", None, None, None, 10)
     assert len(result) == 1
     assert result[0]["name"] == "test-dataset"
-    assert result[0]["uri"] == "at://did:plc:abc/science.alt.dataset.record/3xyz"
+    assert result[0]["uri"] == "at://did:plc:abc/science.alt.dataset.entry/3xyz"
 
 
 @pytest.mark.asyncio
@@ -153,7 +153,7 @@ async def test_get_dataset_found(mock_query):
     ctx = _make_ctx(pool)
 
     result = await get_dataset(
-        ctx, uri="at://did:plc:abc/science.alt.dataset.record/3xyz"
+        ctx, uri="at://did:plc:abc/science.alt.dataset.entry/3xyz"
     )
 
     mock_query.assert_called_once_with(pool, "did:plc:abc", "3xyz")
@@ -169,7 +169,7 @@ async def test_get_dataset_not_found(mock_query):
     ctx = _make_ctx(pool)
 
     result = await get_dataset(
-        ctx, uri="at://did:plc:abc/science.alt.dataset.record/missing"
+        ctx, uri="at://did:plc:abc/science.alt.dataset.entry/missing"
     )
 
     assert result["error"] == "Dataset not found"
@@ -315,7 +315,7 @@ async def test_search_lenses_clamps_limit(mock_query):
 async def test_describe_service(mock_counts):
     mock_counts.return_value = {
         "science.alt.dataset.schema": 10,
-        "science.alt.dataset.record": 50,
+        "science.alt.dataset.entry": 50,
         "science.alt.dataset.label": 30,
         "science.alt.dataset.lens": 5,
     }
@@ -325,5 +325,5 @@ async def test_describe_service(mock_counts):
     result = await describe_service(ctx)
 
     assert result["did"].startswith("did:web:")
-    assert "science.alt.dataset.record" in result["availableCollections"]
-    assert result["recordCount"]["science.alt.dataset.record"] == 50
+    assert "science.alt.dataset.entry" in result["availableCollections"]
+    assert result["recordCount"]["science.alt.dataset.entry"] == 50

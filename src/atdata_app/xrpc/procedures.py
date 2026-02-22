@@ -137,7 +137,7 @@ async def publish_dataset(request: Request) -> dict[str, Any]:
     rkey = body.get("rkey")
 
     record_type = record.get("$type", "")
-    if record_type and record_type != "science.alt.dataset.record":
+    if record_type and record_type != "science.alt.dataset.entry":
         raise HTTPException(status_code=400, detail="Invalid $type for dataset")
 
     for field in ("name", "schemaRef", "storage", "createdAt"):
@@ -170,11 +170,11 @@ async def publish_dataset(request: Request) -> dict[str, Any]:
             detail=f"Invalid storage $type: {storage.get('$type')}",
         )
 
-    record["$type"] = "science.alt.dataset.record"
+    record["$type"] = "science.alt.dataset.entry"
 
     pds = await _resolve_pds(auth.iss)
     result = await _proxy_create_record(
-        pds, pds_token, auth.iss, "science.alt.dataset.record", record, rkey
+        pds, pds_token, auth.iss, "science.alt.dataset.entry", record, rkey
     )
     return {"uri": result.get("uri"), "cid": result.get("cid")}
 

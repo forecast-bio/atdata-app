@@ -37,6 +37,9 @@ ATProto Network
 # Install dependencies
 uv sync --dev
 
+# Initialize the lexicon submodule
+git submodule update --init
+
 # Set up PostgreSQL (schema auto-applies on startup)
 createdb atdata_app
 
@@ -134,6 +137,16 @@ uv run ruff check src/ tests/
 ```
 
 Tests mock all external dependencies (database, HTTP, identity resolution) using `unittest.mock.AsyncMock`. HTTP endpoint tests use httpx `ASGITransport` for in-process testing without a running server.
+
+### Lexicon Definitions
+
+The `lexicons/` directory is a [git submodule](https://github.com/forecast-bio/atdata-lexicon) containing the authoritative `science.alt.dataset.*` lexicon schemas. Initialize it with:
+
+```bash
+git submodule update --init
+```
+
+The lexicons are for reference and CI validation. The Python source code uses hardcoded NSID constants and does not read the lexicon JSON files at runtime.
 
 ## License
 

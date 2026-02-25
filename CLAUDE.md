@@ -28,6 +28,16 @@ uv run ruff check src/ tests/
 uv run uvicorn atdata_app.main:app --reload
 ```
 
+## Lexicon Submodule
+
+The `lexicons/` directory is a git submodule pointing to [forecast-bio/atdata-lexicon](https://github.com/forecast-bio/atdata-lexicon), which contains the authoritative `science.alt.dataset.*` lexicon definitions. The submodule is for reference and CI validation — the Python source code does not read lexicon files at runtime.
+
+After cloning, initialize the submodule:
+
+```bash
+git submodule update --init
+```
+
 ## Architecture
 
 ### Data Flow

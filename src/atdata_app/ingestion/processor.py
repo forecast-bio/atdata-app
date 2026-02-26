@@ -62,14 +62,7 @@ async def process_commit(
         record = commit["record"]
         cid = commit.get("cid")
         try:
-            if table == "schemas":
-                await db.upsert_schema(pool, did, rkey, cid, record)
-            elif table == "entries":
-                await db.upsert_entry(pool, did, rkey, cid, record)
-            elif table == "labels":
-                await db.upsert_label(pool, did, rkey, cid, record)
-            elif table == "lenses":
-                await db.upsert_lens(pool, did, rkey, cid, record)
+            await db.UPSERT_FNS[table](pool, did, rkey, cid, record)
             logger.debug("Upserted %s %s/%s", collection, did, rkey)
             if change_stream is not None:
                 change_stream.publish(

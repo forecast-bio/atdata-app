@@ -20,6 +20,7 @@ COLLECTION_TABLE_MAP: dict[str, str] = {
     f"{LEXICON_NAMESPACE}.entry": "entries",
     f"{LEXICON_NAMESPACE}.label": "labels",
     f"{LEXICON_NAMESPACE}.lens": "lenses",
+    f"{LEXICON_NAMESPACE}.index": "index_providers",
 }
 
 
@@ -203,6 +204,36 @@ async def upsert_lens(
         )
 
 
+async def upsert_index_provider(
+    pool: asyncpg.Pool,
+    did: str,
+    rkey: str,
+    cid: str | None,
+    record: dict[str, Any],
+) -> None:
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO index_providers (did, rkey, cid, name, description, endpoint_url,
+                                         created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (did, rkey) DO UPDATE SET
+                cid = EXCLUDED.cid,
+                name = EXCLUDED.name,
+                description = EXCLUDED.description,
+                endpoint_url = EXCLUDED.endpoint_url,
+                indexed_at = NOW()
+            """,
+            did,
+            rkey,
+            cid,
+            record["name"],
+            record.get("description"),
+            record["endpointUrl"],
+            record.get("createdAt", ""),
+        )
+
+
 async def delete_record(pool: asyncpg.Pool, table: str, did: str, rkey: str) -> None:
     if table not in COLLECTION_TABLE_MAP.values():
         return
@@ -219,6 +250,7 @@ UPSERT_FNS = {
     "entries": upsert_entry,
     "labels": upsert_label,
     "lenses": upsert_lens,
+    "index_providers": upsert_index_provider,
 }
 
 
@@ -449,6 +481,49 @@ async def query_list_lenses(
         )
 
 
+async def query_get_index_provider(
+    pool: asyncpg.Pool, did: str, rkey: str
+) -> asyncpg.Record | None:
+    async with pool.acquire() as conn:
+        return await conn.fetchrow(
+            "SELECT * FROM index_providers WHERE did = $1 AND rkey = $2", did, rkey
+        )
+
+
+async def query_list_index_providers(
+    pool: asyncpg.Pool,
+    repo: str | None = None,
+    limit: int = 50,
+    cursor_did: str | None = None,
+    cursor_rkey: str | None = None,
+    cursor_indexed_at: str | None = None,
+) -> list[asyncpg.Record]:
+    conditions: list[str] = []
+    params: list[Any] = []
+    idx = 1
+
+    if repo:
+        conditions.append(f"did = ${idx}")
+        params.append(repo)
+        idx += 1
+
+    if cursor_indexed_at and cursor_did and cursor_rkey:
+        conditions.append(
+            f"(indexed_at, did, rkey) < (${idx}, ${idx + 1}, ${idx + 2})"
+        )
+        params.extend([datetime.fromisoformat(cursor_indexed_at), cursor_did, cursor_rkey])
+        idx += 3
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+
+    async with pool.acquire() as conn:
+        return await conn.fetch(
+            f"SELECT * FROM index_providers {where} ORDER BY indexed_at DESC, did DESC, rkey DESC LIMIT ${idx}",
+            *params,
+        )
+
+
 async def query_search_datasets(
     pool: asyncpg.Pool,
     q: str,
@@ -544,13 +619,17 @@ async def query_search_lenses(
         )
 
 
+async def _fetch_record_counts(conn: asyncpg.Connection) -> dict[str, int]:
+    counts = {}
+    for collection, table in COLLECTION_TABLE_MAP.items():
+        row = await conn.fetchrow(f"SELECT COUNT(*) as cnt FROM {table}")  # noqa: S608
+        counts[collection] = row["cnt"]
+    return counts
+
+
 async def query_record_counts(pool: asyncpg.Pool) -> dict[str, int]:
     async with pool.acquire() as conn:
-        counts = {}
-        for collection, table in COLLECTION_TABLE_MAP.items():
-            row = await conn.fetchrow(f"SELECT COUNT(*) as cnt FROM {table}")  # noqa: S608
-            counts[collection] = row["cnt"]
-        return counts
+        return await _fetch_record_counts(conn)
 
 
 async def query_labels_for_dataset(
@@ -692,11 +771,7 @@ async def query_analytics_summary(
             {"term": r["term"], "count": r["count"]} for r in term_rows
         ]
 
-        # Record counts
-        counts = {}
-        for collection, table in COLLECTION_TABLE_MAP.items():
-            c = await conn.fetchrow(f"SELECT COUNT(*) AS cnt FROM {table}")  # noqa: S608
-            counts[collection] = c["cnt"]
+        counts = await _fetch_record_counts(conn)
 
         return {
             "totalViews": total_views,
@@ -720,7 +795,10 @@ async def query_entry_stats(
             """
             SELECT
                 COUNT(*) FILTER (WHERE event_type = 'view_entry') AS views,
-                COUNT(*) FILTER (WHERE event_type = 'search') AS search_appearances
+                COUNT(*) FILTER (WHERE event_type = 'search') AS search_appearances,
+                COUNT(*) FILTER (WHERE event_type = 'download') AS downloads,
+                COUNT(*) FILTER (WHERE event_type = 'citation') AS citations,
+                COUNT(*) FILTER (WHERE event_type = 'derivative') AS derivatives
             FROM analytics_events
             WHERE target_did = $1 AND target_rkey = $2
               AND created_at >= NOW() - $3::interval
@@ -732,6 +810,9 @@ async def query_entry_stats(
         return {
             "views": row["views"],
             "searchAppearances": row["search_appearances"],
+            "downloads": row["downloads"],
+            "citations": row["citations"],
+            "derivatives": row["derivatives"],
             "period": period,
         }
 
@@ -750,6 +831,8 @@ async def query_active_publishers(pool: asyncpg.Pool, days: int = 30) -> int:
                 SELECT did FROM labels WHERE indexed_at >= NOW() - $1::interval
                 UNION
                 SELECT did FROM lenses WHERE indexed_at >= NOW() - $1::interval
+                UNION
+                SELECT did FROM index_providers WHERE indexed_at >= NOW() - $1::interval
             ) sub
             """,
             interval,

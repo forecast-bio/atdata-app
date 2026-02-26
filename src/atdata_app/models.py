@@ -127,12 +127,28 @@ def row_to_label(row) -> dict[str, Any]:
     d: dict[str, Any] = {
         "uri": uri,
         "cid": row["cid"],
+        "did": row["did"],
         "name": row["name"],
         "datasetUri": row["dataset_uri"],
         "createdAt": row["created_at"],
     }
     if row["version"]:
         d["version"] = row["version"]
+    if row["description"]:
+        d["description"] = row["description"]
+    return d
+
+
+def row_to_index_provider(row) -> dict[str, Any]:
+    uri = make_at_uri(row["did"], "science.alt.dataset.index", row["rkey"])
+    d: dict[str, Any] = {
+        "uri": uri,
+        "cid": row["cid"],
+        "did": row["did"],
+        "name": row["name"],
+        "endpointUrl": row["endpoint_url"],
+        "createdAt": row["created_at"],
+    }
     if row["description"]:
         d["description"] = row["description"]
     return d
@@ -150,6 +166,7 @@ def row_to_lens(row) -> dict[str, Any]:
     d: dict[str, Any] = {
         "uri": uri,
         "cid": row["cid"],
+        "did": row["did"],
         "name": row["name"],
         "sourceSchema": row["source_schema"],
         "targetSchema": row["target_schema"],
@@ -236,4 +253,22 @@ class GetAnalyticsResponse(BaseModel):
 class GetEntryStatsResponse(BaseModel):
     views: int
     searchAppearances: int
+    downloads: int = 0
+    citations: int = 0
+    derivatives: int = 0
     period: str
+
+
+class ListIndexesResponse(BaseModel):
+    indexes: list[dict[str, Any]]
+    cursor: str | None = None
+
+
+class IndexSkeletonResponse(BaseModel):
+    items: list[dict[str, Any]]
+    cursor: str | None = None
+
+
+class IndexResponse(BaseModel):
+    items: list[dict[str, Any]]
+    cursor: str | None = None

@@ -267,14 +267,15 @@ def _make_event(
 
 
 @pytest.mark.asyncio
-@patch(f"{_DB}.upsert_entry", new_callable=AsyncMock)
-async def test_processor_publishes_create_event(mock_upsert):
+async def test_processor_publishes_create_event():
+    mock_upsert = AsyncMock()
     pool = AsyncMock()
     cs = ChangeStream()
     _, queue = cs.subscribe()
 
     event = _make_event(operation="create")
-    await process_commit(pool, event, change_stream=cs)
+    with patch.dict(f"{_DB}.UPSERT_FNS", {"entries": mock_upsert}):
+        await process_commit(pool, event, change_stream=cs)
 
     assert not queue.empty()
     change_event = queue.get_nowait()
@@ -305,26 +306,27 @@ async def test_processor_publishes_delete_event(mock_delete):
 
 
 @pytest.mark.asyncio
-@patch(f"{_DB}.upsert_entry", new_callable=AsyncMock)
-async def test_processor_no_event_on_upsert_failure(mock_upsert):
-    mock_upsert.side_effect = Exception("db error")
+async def test_processor_no_event_on_upsert_failure():
+    mock_upsert = AsyncMock(side_effect=Exception("db error"))
     pool = AsyncMock()
     cs = ChangeStream()
     _, queue = cs.subscribe()
 
     event = _make_event(operation="create")
-    await process_commit(pool, event, change_stream=cs)
+    with patch.dict(f"{_DB}.UPSERT_FNS", {"entries": mock_upsert}):
+        await process_commit(pool, event, change_stream=cs)
 
     assert queue.empty()
 
 
 @pytest.mark.asyncio
-@patch(f"{_DB}.upsert_entry", new_callable=AsyncMock)
-async def test_processor_works_without_change_stream(mock_upsert):
+async def test_processor_works_without_change_stream():
     """Backward compat: process_commit works when change_stream is None."""
+    mock_upsert = AsyncMock()
     pool = AsyncMock()
     event = _make_event(operation="create")
-    await process_commit(pool, event)
+    with patch.dict(f"{_DB}.UPSERT_FNS", {"entries": mock_upsert}):
+        await process_commit(pool, event)
     mock_upsert.assert_called_once()
 
 

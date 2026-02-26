@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
@@ -19,7 +20,6 @@ from atdata_app.database import (
     query_get_schema,
     query_record_exists,
 )
-from urllib.parse import urlparse
 from atdata_app.models import parse_at_uri
 
 logger = logging.getLogger(__name__)

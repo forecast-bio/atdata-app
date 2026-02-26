@@ -132,8 +132,7 @@ async def test_get_index_skeleton_not_found(mock_get_provider):
 
 
 @pytest.mark.asyncio
-@patch(f"{_QUERIES}.query_get_index_provider", new_callable=AsyncMock)
-async def test_get_index_skeleton_invalid_uri(mock_get_provider):
+async def test_get_index_skeleton_invalid_uri():
     app, pool = _make_app()
 
     transport = ASGITransport(app=app)

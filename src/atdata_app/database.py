@@ -825,6 +825,8 @@ async def query_active_publishers(pool: asyncpg.Pool, days: int = 30) -> int:
                 SELECT did FROM labels WHERE indexed_at >= NOW() - $1::interval
                 UNION
                 SELECT did FROM lenses WHERE indexed_at >= NOW() - $1::interval
+                UNION
+                SELECT did FROM index_providers WHERE indexed_at >= NOW() - $1::interval
             ) sub
             """,
             interval,

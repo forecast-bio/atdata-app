@@ -7,9 +7,9 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from atdata_app import get_resolver
 import httpx
 
+from atdata_app import get_resolver
 from atdata_app.database import (
     COLLECTION_TABLE_MAP,
     fire_analytics_event,

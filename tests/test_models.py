@@ -10,6 +10,7 @@ from atdata_app.models import (
     make_at_uri,
     parse_at_uri,
     row_to_entry,
+    row_to_index_provider,
     row_to_label,
     row_to_lens,
     row_to_schema,
@@ -251,3 +252,33 @@ def test_row_to_lens_json_string_code():
     d = row_to_lens(row)
     assert d["getterCode"] == {"repo": "x"}
     assert d["putterCode"] == {"repo": "y"}
+
+
+# ---------------------------------------------------------------------------
+# row_to_index_provider
+# ---------------------------------------------------------------------------
+
+_INDEX_PROVIDER_ROW = {
+    "did": "did:plc:provider1",
+    "rkey": "3idx",
+    "cid": "bafyindex",
+    "name": "Genomics Index",
+    "description": "Curated genomics datasets",
+    "endpoint_url": "https://example.com/skeleton",
+    "created_at": "2025-01-01T00:00:00Z",
+}
+
+
+def test_row_to_index_provider():
+    d = row_to_index_provider(_INDEX_PROVIDER_ROW)
+    assert d["uri"] == "at://did:plc:provider1/science.alt.dataset.index/3idx"
+    assert d["did"] == "did:plc:provider1"
+    assert d["name"] == "Genomics Index"
+    assert d["endpointUrl"] == "https://example.com/skeleton"
+    assert d["description"] == "Curated genomics datasets"
+
+
+def test_row_to_index_provider_omits_null_description():
+    row = {**_INDEX_PROVIDER_ROW, "description": None}
+    d = row_to_index_provider(row)
+    assert "description" not in d

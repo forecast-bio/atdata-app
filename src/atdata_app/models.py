@@ -127,6 +127,7 @@ def row_to_label(row) -> dict[str, Any]:
     d: dict[str, Any] = {
         "uri": uri,
         "cid": row["cid"],
+        "did": row["did"],
         "name": row["name"],
         "datasetUri": row["dataset_uri"],
         "createdAt": row["created_at"],
@@ -150,6 +151,7 @@ def row_to_lens(row) -> dict[str, Any]:
     d: dict[str, Any] = {
         "uri": uri,
         "cid": row["cid"],
+        "did": row["did"],
         "name": row["name"],
         "sourceSchema": row["source_schema"],
         "targetSchema": row["target_schema"],
@@ -236,4 +238,7 @@ class GetAnalyticsResponse(BaseModel):
 class GetEntryStatsResponse(BaseModel):
     views: int
     searchAppearances: int
+    downloads: int = 0
+    citations: int = 0
+    derivatives: int = 0
     period: str

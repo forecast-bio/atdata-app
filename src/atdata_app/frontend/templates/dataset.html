@@ -27,6 +27,20 @@
             <tr><th>License</th><td>{{ entry.license }}</td></tr>
             {% endif %}
             <tr><th>Schema</th><td><a href="/schema/{{ schema_did }}/{{ schema_rkey }}">{{ entry.schemaRef }}</a></td></tr>
+            {% if schema_info %}
+            {% if schema_info.arrayFormat is defined %}
+            <tr><th>Array Format</th><td>{{ schema_info.get("arrayFormatLabel", schema_info.arrayFormat) }}</td></tr>
+            {% endif %}
+            {% if schema_info.dtype is defined %}
+            <tr><th>Data Type</th><td><code>{{ schema_info.dtype }}</code></td></tr>
+            {% endif %}
+            {% if schema_info.shape is defined %}
+            <tr><th>Shape</th><td><code>{{ schema_info.shape | join(" × ") }}</code></td></tr>
+            {% endif %}
+            {% if schema_info.dimensionNames is defined %}
+            <tr><th>Dimensions</th><td>{{ schema_info.dimensionNames | join(", ") }}</td></tr>
+            {% endif %}
+            {% endif %}
             {% if entry.size %}
             <tr>
                 <th>Size</th>

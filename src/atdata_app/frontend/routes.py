@@ -107,6 +107,13 @@ async def dataset_detail(request: Request, did: str, rkey: str):
         except ValueError:
             pass
 
+    # Fetch the referenced schema for inline display of format/annotation info
+    schema_info = None
+    if schema_did and schema_rkey:
+        schema_row = await query_get_schema(pool, schema_did, schema_rkey)
+        if schema_row:
+            schema_info = row_to_schema(schema_row)
+
     # Fetch labels pointing to this dataset
     dataset_uri = entry["uri"]
     label_rows = await query_labels_for_dataset(pool, dataset_uri)
@@ -119,6 +126,7 @@ async def dataset_detail(request: Request, did: str, rkey: str):
             "entry": entry,
             "schema_did": schema_did,
             "schema_rkey": schema_rkey,
+            "schema_info": schema_info,
             "labels": labels,
         },
     )

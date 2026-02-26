@@ -57,7 +57,10 @@ mcp_server = FastMCP(
         "ATProto AppView for the science.alt.dataset namespace. "
         "Use these tools to discover and query scientific datasets, "
         "schemas, and lenses (bidirectional schema transforms) published "
-        "on the AT Protocol network."
+        "on the AT Protocol network. "
+        "Schemas may specify an arrayFormat (numpyBytes, parquetBytes, "
+        "sparseBytes, structuredBytes, arrowTensor, safetensors) and "
+        "ndarray annotations (dtype, shape, dimensionNames)."
     ),
     lifespan=server_lifespan,
 )
@@ -127,7 +130,8 @@ async def get_schema(ctx: Ctx, uri: str) -> dict[str, Any]:
         uri: AT-URI of the schema (e.g. at://did:plc:abc/science.alt.dataset.schema/my.schema@1.0.0).
 
     Returns:
-        Full schema record including name, version, type, schema body, and description.
+        Full schema record including name, version, type, schema body, description,
+        and (when present) arrayFormat, dtype, shape, and dimensionNames.
     """
     sc = _get_ctx(ctx)
     did, _collection, rkey = parse_at_uri(uri)

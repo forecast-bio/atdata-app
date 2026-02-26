@@ -41,6 +41,7 @@ def _make_schema_row(
     did: str = "did:plc:test123",
     rkey: str = "test@1.0.0",
     name: str = "TestSchema",
+    schema_body: str | dict = '{"type": "object"}',
 ) -> dict:
     return {
         "did": did,
@@ -49,7 +50,7 @@ def _make_schema_row(
         "name": name,
         "version": "1.0.0",
         "schema_type": "jsonSchema",
-        "schema_body": '{"type": "object"}',
+        "schema_body": schema_body,
         "description": "A test schema",
         "metadata": None,
         "created_at": "2025-01-01T00:00:00Z",
@@ -140,10 +141,12 @@ async def test_home_search(mock_search):
 
 @pytest.mark.asyncio
 @patch("atdata_app.frontend.routes.query_labels_for_dataset", new_callable=AsyncMock)
+@patch("atdata_app.frontend.routes.query_get_schema", new_callable=AsyncMock)
 @patch("atdata_app.frontend.routes.query_get_entry", new_callable=AsyncMock)
-async def test_dataset_detail(mock_get, mock_labels):
+async def test_dataset_detail(mock_get, mock_schema, mock_labels):
     pool, _conn = _mock_pool()
     mock_get.return_value = _make_entry_row()
+    mock_schema.return_value = _make_schema_row()
     mock_labels.return_value = [_make_label_row()]
     app = _make_app(pool)
     transport = ASGITransport(app=app)
@@ -258,6 +261,96 @@ async def test_about(mock_counts):
     assert resp.status_code == 200
     assert "About This Service" in resp.text
     assert "did:web:localhost%3A8000" in resp.text
+
+
+# ---------------------------------------------------------------------------
+# Schema detail — array format & ndarray annotations
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@patch("atdata_app.frontend.routes.query_get_schema", new_callable=AsyncMock)
+async def test_schema_detail_array_format(mock_get):
+    pool, _conn = _mock_pool()
+    mock_get.return_value = _make_schema_row(
+        schema_body={
+            "arrayFormat": "sparseBytes",
+            "dtype": "float32",
+            "shape": [100, 200],
+            "dimensionNames": ["samples", "features"],
+        },
+    )
+    app = _make_app(pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/schema/did:plc:test123/test@1.0.0")
+    assert resp.status_code == 200
+    assert "Sparse matrix" in resp.text
+    assert "float32" in resp.text
+    assert "100" in resp.text
+    assert "samples" in resp.text
+
+
+@pytest.mark.asyncio
+@patch("atdata_app.frontend.routes.query_get_schema", new_callable=AsyncMock)
+async def test_schema_detail_no_array_format(mock_get):
+    """Plain schemas should not show array format rows."""
+    pool, _conn = _mock_pool()
+    mock_get.return_value = _make_schema_row()
+    app = _make_app(pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/schema/did:plc:test123/test@1.0.0")
+    assert resp.status_code == 200
+    assert "Array Format" not in resp.text
+    assert "Data Type" not in resp.text
+
+
+# ---------------------------------------------------------------------------
+# Dataset detail — schema format info
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@patch("atdata_app.frontend.routes.query_labels_for_dataset", new_callable=AsyncMock)
+@patch("atdata_app.frontend.routes.query_get_schema", new_callable=AsyncMock)
+@patch("atdata_app.frontend.routes.query_get_entry", new_callable=AsyncMock)
+async def test_dataset_detail_with_schema_format(mock_entry, mock_schema, mock_labels):
+    pool, _conn = _mock_pool()
+    mock_entry.return_value = _make_entry_row()
+    mock_schema.return_value = _make_schema_row(
+        did="did:plc:test",
+        rkey="test@1.0.0",
+        schema_body={"arrayFormat": "numpyBytes", "dtype": "float64"},
+    )
+    mock_labels.return_value = []
+    app = _make_app(pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/dataset/did:plc:test123/3xyz")
+    assert resp.status_code == 200
+    assert "NumPy ndarray" in resp.text
+    assert "float64" in resp.text
+
+
+# ---------------------------------------------------------------------------
+# Schemas list — format column
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@patch("atdata_app.frontend.routes.query_list_schemas", new_callable=AsyncMock)
+async def test_schemas_list_shows_format(mock_list):
+    pool, _conn = _mock_pool()
+    mock_list.return_value = [
+        _make_schema_row(schema_body={"arrayFormat": "safetensors"}),
+    ]
+    app = _make_app(pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/schemas")
+    assert resp.status_code == 200
+    assert "Safetensors" in resp.text
 
 
 # ---------------------------------------------------------------------------

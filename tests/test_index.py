@@ -494,8 +494,8 @@ async def test_publish_index_invalid_type(mock_auth):
 
 
 @pytest.mark.asyncio
-@patch(f"{_DB}.upsert_index_provider", new_callable=AsyncMock)
-async def test_process_commit_index_provider(mock_upsert):
+async def test_process_commit_index_provider():
+    mock_upsert = AsyncMock()
     pool = AsyncMock()
     event = {
         "did": "did:plc:provider1",
@@ -515,7 +515,8 @@ async def test_process_commit_index_provider(mock_upsert):
             "cid": "bafyindex",
         },
     }
-    await process_commit(pool, event)
+    with patch.dict(f"{_DB}.UPSERT_FNS", {"index_providers": mock_upsert}):
+        await process_commit(pool, event)
     mock_upsert.assert_called_once_with(
         pool, "did:plc:provider1", "3abc", "bafyindex", event["commit"]["record"]
     )

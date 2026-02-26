@@ -16,6 +16,18 @@
         <tbody>
             <tr><th>AT-URI</th><td><code>{{ schema.uri }}</code></td></tr>
             <tr><th>Type</th><td>{{ schema.schemaType }}</td></tr>
+            {% if schema.arrayFormat is defined %}
+            <tr><th>Array Format</th><td>{{ schema.get("arrayFormatLabel", schema.arrayFormat) }}</td></tr>
+            {% endif %}
+            {% if schema.dtype is defined %}
+            <tr><th>Data Type</th><td><code>{{ schema.dtype }}</code></td></tr>
+            {% endif %}
+            {% if schema.shape is defined %}
+            <tr><th>Shape</th><td><code>{{ schema.shape | join(" × ") }}</code></td></tr>
+            {% endif %}
+            {% if schema.dimensionNames is defined %}
+            <tr><th>Dimensions</th><td>{{ schema.dimensionNames | join(", ") }}</td></tr>
+            {% endif %}
             <tr><th>Version</th><td>{{ schema.version }}</td></tr>
             <tr><th>Created</th><td>{{ schema.createdAt }}</td></tr>
         </tbody>

@@ -144,6 +144,22 @@ CREATE INDEX IF NOT EXISTS idx_analytics_events_type_created
 CREATE INDEX IF NOT EXISTS idx_analytics_events_target
     ON analytics_events (target_did, target_rkey, event_type);
 
+-- Index providers (science.alt.dataset.index)
+CREATE TABLE IF NOT EXISTS index_providers (
+    did          TEXT NOT NULL,
+    rkey         TEXT NOT NULL,
+    cid          TEXT,
+    name         TEXT NOT NULL,
+    description  TEXT,
+    endpoint_url TEXT NOT NULL,
+    created_at   TEXT NOT NULL,
+    indexed_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (did, rkey)
+);
+
+CREATE INDEX IF NOT EXISTS idx_index_providers_did ON index_providers (did);
+CREATE INDEX IF NOT EXISTS idx_index_providers_indexed_at ON index_providers (indexed_at DESC);
+
 -- Pre-aggregated analytics counters (avoids expensive COUNT on events table)
 CREATE TABLE IF NOT EXISTS analytics_counters (
     target_did   TEXT NOT NULL,

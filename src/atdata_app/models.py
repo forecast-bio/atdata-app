@@ -10,6 +10,32 @@ from pydantic import BaseModel
 
 
 # ---------------------------------------------------------------------------
+# Known array format tokens (atdata-lexicon#21)
+# ---------------------------------------------------------------------------
+
+KNOWN_ARRAY_FORMATS: set[str] = {
+    # Original formats
+    "numpyBytes",
+    "parquetBytes",
+    # New formats
+    "sparseBytes",
+    "structuredBytes",
+    "arrowTensor",
+    "safetensors",
+}
+
+#: Human-friendly display names for array format tokens.
+ARRAY_FORMAT_LABELS: dict[str, str] = {
+    "numpyBytes": "NumPy ndarray",
+    "parquetBytes": "Parquet",
+    "sparseBytes": "Sparse matrix (CSR/CSC/COO)",
+    "structuredBytes": "NumPy structured array",
+    "arrowTensor": "Arrow tensor IPC",
+    "safetensors": "Safetensors",
+}
+
+
+# ---------------------------------------------------------------------------
 # AT-URI parsing
 # ---------------------------------------------------------------------------
 
@@ -119,6 +145,19 @@ def row_to_schema(row) -> dict[str, Any]:
     }
     if row["description"]:
         d["description"] = row["description"]
+
+    # Surface array format and ndarray v1.1.0 annotation fields for display
+    array_format = schema_body.get("arrayFormat")
+    if array_format:
+        d["arrayFormat"] = array_format
+        d["arrayFormatLabel"] = ARRAY_FORMAT_LABELS.get(array_format, array_format)
+    if schema_body.get("dtype"):
+        d["dtype"] = schema_body["dtype"]
+    if schema_body.get("shape"):
+        d["shape"] = schema_body["shape"]
+    if schema_body.get("dimensionNames"):
+        d["dimensionNames"] = schema_body["dimensionNames"]
+
     return d
 
 
@@ -127,12 +166,28 @@ def row_to_label(row) -> dict[str, Any]:
     d: dict[str, Any] = {
         "uri": uri,
         "cid": row["cid"],
+        "did": row["did"],
         "name": row["name"],
         "datasetUri": row["dataset_uri"],
         "createdAt": row["created_at"],
     }
     if row["version"]:
         d["version"] = row["version"]
+    if row["description"]:
+        d["description"] = row["description"]
+    return d
+
+
+def row_to_index_provider(row) -> dict[str, Any]:
+    uri = make_at_uri(row["did"], "science.alt.dataset.index", row["rkey"])
+    d: dict[str, Any] = {
+        "uri": uri,
+        "cid": row["cid"],
+        "did": row["did"],
+        "name": row["name"],
+        "endpointUrl": row["endpoint_url"],
+        "createdAt": row["created_at"],
+    }
     if row["description"]:
         d["description"] = row["description"]
     return d
@@ -150,6 +205,7 @@ def row_to_lens(row) -> dict[str, Any]:
     d: dict[str, Any] = {
         "uri": uri,
         "cid": row["cid"],
+        "did": row["did"],
         "name": row["name"],
         "sourceSchema": row["source_schema"],
         "targetSchema": row["target_schema"],
@@ -236,4 +292,22 @@ class GetAnalyticsResponse(BaseModel):
 class GetEntryStatsResponse(BaseModel):
     views: int
     searchAppearances: int
+    downloads: int = 0
+    citations: int = 0
+    derivatives: int = 0
     period: str
+
+
+class ListIndexesResponse(BaseModel):
+    indexes: list[dict[str, Any]]
+    cursor: str | None = None
+
+
+class IndexSkeletonResponse(BaseModel):
+    items: list[dict[str, Any]]
+    cursor: str | None = None
+
+
+class IndexResponse(BaseModel):
+    items: list[dict[str, Any]]
+    cursor: str | None = None

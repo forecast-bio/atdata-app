@@ -7,7 +7,9 @@ then proxies ``com.atproto.repo.createRecord`` to the caller's PDS.
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
@@ -15,6 +17,7 @@ from fastapi import APIRouter, HTTPException, Request
 from atdata_app import get_resolver
 from atdata_app.auth import verify_service_auth
 from atdata_app.database import (
+    fire_analytics_event,
     query_get_entry,
     query_get_schema,
     query_record_exists,
@@ -268,3 +271,118 @@ async def publish_lens(request: Request) -> dict[str, Any]:
         pds, pds_token, auth.iss, "science.alt.dataset.lens", record, rkey
     )
     return {"uri": result.get("uri"), "cid": result.get("cid")}
+
+
+# ---------------------------------------------------------------------------
+# publishIndex
+# ---------------------------------------------------------------------------
+
+
+@router.post("/science.alt.dataset.publishIndex")
+async def publish_index(request: Request) -> dict[str, Any]:
+    auth = await verify_service_auth(request, "science.alt.dataset.publishIndex")
+    pds_token = _require_pds_token(request)
+
+    body = await request.json()
+    record = body.get("record", {})
+    rkey = body.get("rkey")
+
+    record_type = record.get("$type", "")
+    if record_type and record_type != "science.alt.dataset.index":
+        raise HTTPException(status_code=400, detail="Invalid $type for index")
+
+    for field in ("name", "endpointUrl", "createdAt"):
+        if field not in record:
+            raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+
+    # Validate endpoint URL is HTTPS
+    parsed = urlparse(record["endpointUrl"])
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise HTTPException(
+            status_code=400, detail="endpointUrl must be a valid HTTPS URL"
+        )
+
+    record["$type"] = "science.alt.dataset.index"
+
+    pds = await _resolve_pds(auth.iss)
+    result = await _proxy_create_record(
+        pds, pds_token, auth.iss, "science.alt.dataset.index", record, rkey
+    )
+    return {"uri": result.get("uri"), "cid": result.get("cid")}
+
+
+# ---------------------------------------------------------------------------
+# sendInteractions
+# ---------------------------------------------------------------------------
+
+_VALID_INTERACTION_TYPES = frozenset({"download", "citation", "derivative"})
+_MAX_INTERACTIONS_BATCH = 100
+
+
+def _validate_iso8601(value: str) -> None:
+    """Raise ValueError if *value* is not a valid ISO 8601 datetime string."""
+    # datetime.fromisoformat handles the common subset we accept
+    datetime.fromisoformat(value)
+
+
+@router.post("/science.alt.dataset.sendInteractions")
+async def send_interactions(request: Request) -> dict[str, Any]:
+    pool = request.app.state.db_pool
+
+    body = await request.json()
+    interactions = body.get("interactions")
+    if not isinstance(interactions, list):
+        raise HTTPException(status_code=400, detail="interactions must be an array")
+
+    if len(interactions) > _MAX_INTERACTIONS_BATCH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Batch size exceeds maximum of {_MAX_INTERACTIONS_BATCH}",
+        )
+
+    for i, item in enumerate(interactions):
+        if not isinstance(item, dict):
+            raise HTTPException(status_code=400, detail=f"interactions[{i}]: must be an object")
+
+        itype = item.get("type")
+        if itype not in _VALID_INTERACTION_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"interactions[{i}]: invalid type '{itype}', "
+                f"must be one of: {', '.join(sorted(_VALID_INTERACTION_TYPES))}",
+            )
+
+        dataset_uri = item.get("datasetUri")
+        if not isinstance(dataset_uri, str):
+            raise HTTPException(
+                status_code=400, detail=f"interactions[{i}]: datasetUri is required"
+            )
+        try:
+            parse_at_uri(dataset_uri)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"interactions[{i}]: invalid AT-URI: {dataset_uri}",
+            )
+
+        timestamp = item.get("timestamp")
+        if timestamp is not None:
+            if not isinstance(timestamp, str):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"interactions[{i}]: timestamp must be a string",
+                )
+            try:
+                _validate_iso8601(timestamp)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"interactions[{i}]: invalid ISO 8601 timestamp: {timestamp}",
+                )
+
+    # All valid — fire analytics events
+    for item in interactions:
+        did, _collection, rkey = parse_at_uri(item["datasetUri"])
+        fire_analytics_event(pool, item["type"], target_did=did, target_rkey=rkey)
+
+    return {}

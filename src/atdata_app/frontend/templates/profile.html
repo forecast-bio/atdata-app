@@ -34,13 +34,14 @@
     <h2>Schemas</h2>
     {% if schemas %}
     <table>
-        <thead><tr><th>Name</th><th>Version</th><th>Type</th></tr></thead>
+        <thead><tr><th>Name</th><th>Version</th><th>Type</th><th>Format</th></tr></thead>
         <tbody>
             {% for s in schemas %}
             <tr>
                 <td><a href="/schema/{{ s.did }}/{{ s.rkey }}">{{ s.name }}</a></td>
                 <td>{{ s.version }}</td>
                 <td>{{ s.schemaType }}</td>
+                <td>{{ s.get("arrayFormatLabel", "") }}</td>
             </tr>
             {% endfor %}
         </tbody>

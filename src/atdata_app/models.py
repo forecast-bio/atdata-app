@@ -236,4 +236,7 @@ class GetAnalyticsResponse(BaseModel):
 class GetEntryStatsResponse(BaseModel):
     views: int
     searchAppearances: int
+    downloads: int = 0
+    citations: int = 0
+    derivatives: int = 0
     period: str

@@ -374,3 +374,225 @@ def test_describe_service_response_without_analytics():
         recordCount={"science.alt.dataset.entry": 10},
     )
     assert resp.analytics is None
+
+
+def test_get_entry_stats_response_with_interactions():
+    resp = GetEntryStatsResponse(
+        views=10, searchAppearances=3, downloads=5, citations=2, derivatives=1, period="week"
+    )
+    assert resp.downloads == 5
+    assert resp.citations == 2
+    assert resp.derivatives == 1
+
+
+def test_get_entry_stats_response_defaults_interactions():
+    resp = GetEntryStatsResponse(views=10, searchAppearances=3, period="week")
+    assert resp.downloads == 0
+    assert resp.citations == 0
+    assert resp.derivatives == 0
+
+
+# ---------------------------------------------------------------------------
+# sendInteractions endpoint
+# ---------------------------------------------------------------------------
+
+_PROC = "atdata_app.xrpc.procedures"
+
+
+@pytest.mark.asyncio
+@patch(f"{_PROC}.fire_analytics_event")
+async def test_send_interactions_valid_batch(mock_fire, config, pool):
+    app = _mock_app(config, pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/xrpc/science.alt.dataset.sendInteractions",
+            json={
+                "interactions": [
+                    {
+                        "type": "download",
+                        "datasetUri": "at://did:plc:abc/science.alt.dataset.entry/3xyz",
+                    },
+                    {
+                        "type": "citation",
+                        "datasetUri": "at://did:plc:def/science.alt.dataset.entry/4abc",
+                        "timestamp": "2025-06-01T12:00:00Z",
+                    },
+                ]
+            },
+        )
+
+    assert resp.status_code == 200
+    assert resp.json() == {}
+    assert mock_fire.call_count == 2
+    mock_fire.assert_any_call(pool, "download", target_did="did:plc:abc", target_rkey="3xyz")
+    mock_fire.assert_any_call(pool, "citation", target_did="did:plc:def", target_rkey="4abc")
+
+
+@pytest.mark.asyncio
+@patch(f"{_PROC}.fire_analytics_event")
+async def test_send_interactions_empty_array(mock_fire, config, pool):
+    app = _mock_app(config, pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/xrpc/science.alt.dataset.sendInteractions",
+            json={"interactions": []},
+        )
+
+    assert resp.status_code == 200
+    assert resp.json() == {}
+    mock_fire.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch(f"{_PROC}.fire_analytics_event")
+async def test_send_interactions_invalid_uri(mock_fire, config, pool):
+    app = _mock_app(config, pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/xrpc/science.alt.dataset.sendInteractions",
+            json={
+                "interactions": [
+                    {"type": "download", "datasetUri": "https://not-an-at-uri"},
+                ]
+            },
+        )
+
+    assert resp.status_code == 400
+    assert "invalid AT-URI" in resp.json()["detail"]
+    mock_fire.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch(f"{_PROC}.fire_analytics_event")
+async def test_send_interactions_invalid_type(mock_fire, config, pool):
+    app = _mock_app(config, pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/xrpc/science.alt.dataset.sendInteractions",
+            json={
+                "interactions": [
+                    {
+                        "type": "bookmark",
+                        "datasetUri": "at://did:plc:abc/science.alt.dataset.entry/3xyz",
+                    },
+                ]
+            },
+        )
+
+    assert resp.status_code == 400
+    assert "invalid type" in resp.json()["detail"]
+    mock_fire.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch(f"{_PROC}.fire_analytics_event")
+async def test_send_interactions_batch_size_exceeded(mock_fire, config, pool):
+    app = _mock_app(config, pool)
+    transport = ASGITransport(app=app)
+    interactions = [
+        {"type": "download", "datasetUri": "at://did:plc:abc/science.alt.dataset.entry/3xyz"}
+        for _ in range(101)
+    ]
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/xrpc/science.alt.dataset.sendInteractions",
+            json={"interactions": interactions},
+        )
+
+    assert resp.status_code == 400
+    assert "Batch size exceeds maximum" in resp.json()["detail"]
+    mock_fire.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch(f"{_PROC}.fire_analytics_event")
+async def test_send_interactions_invalid_timestamp(mock_fire, config, pool):
+    app = _mock_app(config, pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/xrpc/science.alt.dataset.sendInteractions",
+            json={
+                "interactions": [
+                    {
+                        "type": "download",
+                        "datasetUri": "at://did:plc:abc/science.alt.dataset.entry/3xyz",
+                        "timestamp": "not-a-date",
+                    },
+                ]
+            },
+        )
+
+    assert resp.status_code == 400
+    assert "invalid ISO 8601 timestamp" in resp.json()["detail"]
+    mock_fire.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch(f"{_PROC}.fire_analytics_event")
+async def test_send_interactions_missing_dataset_uri(mock_fire, config, pool):
+    app = _mock_app(config, pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/xrpc/science.alt.dataset.sendInteractions",
+            json={
+                "interactions": [
+                    {"type": "download"},
+                ]
+            },
+        )
+
+    assert resp.status_code == 400
+    assert "datasetUri is required" in resp.json()["detail"]
+    mock_fire.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch(f"{_PROC}.fire_analytics_event")
+async def test_send_interactions_not_an_array(mock_fire, config, pool):
+    app = _mock_app(config, pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/xrpc/science.alt.dataset.sendInteractions",
+            json={"interactions": "not-an-array"},
+        )
+
+    assert resp.status_code == 400
+    assert "interactions must be an array" in resp.json()["detail"]
+    mock_fire.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch(f"{_PROC}.fire_analytics_event")
+async def test_send_interactions_all_three_types(mock_fire, config, pool):
+    app = _mock_app(config, pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/xrpc/science.alt.dataset.sendInteractions",
+            json={
+                "interactions": [
+                    {
+                        "type": "download",
+                        "datasetUri": "at://did:plc:a/science.alt.dataset.entry/1",
+                    },
+                    {
+                        "type": "citation",
+                        "datasetUri": "at://did:plc:b/science.alt.dataset.entry/2",
+                    },
+                    {
+                        "type": "derivative",
+                        "datasetUri": "at://did:plc:c/science.alt.dataset.entry/3",
+                    },
+                ]
+            },
+        )
+
+    assert resp.status_code == 200
+    assert mock_fire.call_count == 3

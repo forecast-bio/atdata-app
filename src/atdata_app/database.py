@@ -720,7 +720,10 @@ async def query_entry_stats(
             """
             SELECT
                 COUNT(*) FILTER (WHERE event_type = 'view_entry') AS views,
-                COUNT(*) FILTER (WHERE event_type = 'search') AS search_appearances
+                COUNT(*) FILTER (WHERE event_type = 'search') AS search_appearances,
+                COUNT(*) FILTER (WHERE event_type = 'download') AS downloads,
+                COUNT(*) FILTER (WHERE event_type = 'citation') AS citations,
+                COUNT(*) FILTER (WHERE event_type = 'derivative') AS derivatives
             FROM analytics_events
             WHERE target_did = $1 AND target_rkey = $2
               AND created_at >= NOW() - $3::interval
@@ -732,6 +735,9 @@ async def query_entry_stats(
         return {
             "views": row["views"],
             "searchAppearances": row["search_appearances"],
+            "downloads": row["downloads"],
+            "citations": row["citations"],
+            "derivatives": row["derivatives"],
             "period": period,
         }
 

@@ -366,11 +366,18 @@ async def query_get_entry(
         )
 
 
+_MAX_GET_ENTRIES_KEYS = 100
+
+
 async def query_get_entries(
     pool: asyncpg.Pool, keys: list[tuple[str, str]]
 ) -> list[asyncpg.Record]:
     if not keys:
         return []
+    if len(keys) > _MAX_GET_ENTRIES_KEYS:
+        raise ValueError(
+            f"query_get_entries: too many keys ({len(keys)}), max {_MAX_GET_ENTRIES_KEYS}"
+        )
     conditions = " OR ".join(
         f"(did = ${i * 2 + 1} AND rkey = ${i * 2 + 2})" for i in range(len(keys))
     )

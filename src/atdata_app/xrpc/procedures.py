@@ -294,11 +294,19 @@ async def publish_index(request: Request) -> dict[str, Any]:
         if field not in record:
             raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
 
-    # Validate endpoint URL is HTTPS
+    # Validate endpoint URL is HTTPS with no credentials or fragments
     parsed = urlparse(record["endpointUrl"])
-    if parsed.scheme != "https" or not parsed.netloc:
+    if parsed.scheme != "https" or not parsed.hostname:
         raise HTTPException(
             status_code=400, detail="endpointUrl must be a valid HTTPS URL"
+        )
+    if parsed.username or parsed.password:
+        raise HTTPException(
+            status_code=400, detail="endpointUrl must not contain credentials"
+        )
+    if parsed.fragment:
+        raise HTTPException(
+            status_code=400, detail="endpointUrl must not contain a fragment"
         )
 
     record["$type"] = "science.alt.dataset.index"
@@ -354,11 +362,16 @@ async def send_interactions(request: Request) -> dict[str, Any]:
                 status_code=400, detail=f"interactions[{i}]: datasetUri is required"
             )
         try:
-            parse_at_uri(dataset_uri)
+            _did, _col, _rkey = parse_at_uri(dataset_uri)
         except ValueError:
             raise HTTPException(
                 status_code=400,
                 detail=f"interactions[{i}]: invalid AT-URI: {dataset_uri}",
+            )
+        if _col != "science.alt.dataset.entry":
+            raise HTTPException(
+                status_code=400,
+                detail=f"interactions[{i}]: datasetUri must reference a dataset entry",
             )
 
     # All valid — fire analytics events

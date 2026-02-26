@@ -143,6 +143,26 @@ async def test_process_commit_lens():
 
 
 @pytest.mark.asyncio
+async def test_process_commit_index_provider():
+    patcher, mock_upsert = _patch_upsert("index_providers")
+    with patcher:
+        pool = AsyncMock()
+        event = _make_event(
+            collection="science.alt.dataset.index",
+            record={
+                "$type": "science.alt.dataset.index",
+                "name": "Genomics Index",
+                "endpointUrl": "https://example.com/skeleton",
+                "createdAt": "2025-01-01T00:00:00Z",
+            },
+        )
+        await process_commit(pool, event)
+        mock_upsert.assert_called_once_with(
+            pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
+        )
+
+
+@pytest.mark.asyncio
 async def test_process_commit_update():
     """Update operations should route to the same upsert function as create."""
     patcher, mock_upsert = _patch_upsert("entries")

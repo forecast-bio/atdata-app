@@ -34,10 +34,10 @@
             {% if schema_info.dtype is defined %}
             <tr><th>Data Type</th><td><code>{{ schema_info.dtype }}</code></td></tr>
             {% endif %}
-            {% if schema_info.shape is defined %}
+            {% if schema_info.shape is defined and schema_info.shape is iterable and schema_info.shape is not string %}
             <tr><th>Shape</th><td><code>{{ schema_info.shape | join(" × ") }}</code></td></tr>
             {% endif %}
-            {% if schema_info.dimensionNames is defined %}
+            {% if schema_info.dimensionNames is defined and schema_info.dimensionNames is iterable and schema_info.dimensionNames is not string %}
             <tr><th>Dimensions</th><td>{{ schema_info.dimensionNames | join(", ") }}</td></tr>
             {% endif %}
             {% endif %}
@@ -63,7 +63,11 @@
         <tbody>
             <tr><th>Type</th><td><code>{{ entry.storage.get("$type", "unknown") }}</code></td></tr>
             {% if entry.storage.url is defined %}
+            {% if entry.storage.url.startswith("https://") or entry.storage.url.startswith("http://") %}
             <tr><th>URL</th><td><a href="{{ entry.storage.url }}">{{ entry.storage.url }}</a></td></tr>
+            {% else %}
+            <tr><th>URL</th><td>{{ entry.storage.url }}</td></tr>
+            {% endif %}
             {% endif %}
         </tbody>
     </table>

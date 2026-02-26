@@ -410,6 +410,10 @@ def _validate_endpoint_url(url: str) -> None:
             )
 
 
+_MAX_SKELETON_RESPONSE_BYTES = 1_048_576  # 1 MiB
+_MAX_SKELETON_CURSOR_LEN = 512
+
+
 async def _fetch_skeleton(
     endpoint_url: str,
     cursor: str | None,
@@ -417,6 +421,10 @@ async def _fetch_skeleton(
 ) -> dict[str, Any]:
     """Fetch skeleton from an upstream index provider."""
     _validate_endpoint_url(endpoint_url)
+
+    if cursor is not None:
+        if len(cursor) > _MAX_SKELETON_CURSOR_LEN or "\x00" in cursor:
+            raise HTTPException(status_code=400, detail="Invalid cursor value")
 
     params: dict[str, Any] = {"limit": limit}
     if cursor:
@@ -433,6 +441,16 @@ async def _fetch_skeleton(
             status_code=502,
             detail=f"Index provider returned {resp.status_code}",
         )
+    # Reject oversized responses to prevent memory exhaustion
+    content_length = resp.headers.get("content-length")
+    if content_length and int(content_length) > _MAX_SKELETON_RESPONSE_BYTES:
+        raise HTTPException(
+            status_code=502, detail="Index provider response too large"
+        )
+    if len(resp.content) > _MAX_SKELETON_RESPONSE_BYTES:
+        raise HTTPException(
+            status_code=502, detail="Index provider response too large"
+        )
     try:
         data = resp.json()
     except (ValueError, KeyError) as e:
@@ -445,6 +463,17 @@ async def _fetch_skeleton(
         )
     # Cap items to the requested limit regardless of what upstream returns
     data["items"] = data["items"][:limit]
+    # Whitelist item fields — only pass through 'uri' to prevent injection
+    data["items"] = [{"uri": item.get("uri", "")} for item in data["items"]]
+    # Validate upstream cursor
+    upstream_cursor = data.get("cursor")
+    if upstream_cursor is not None:
+        if (
+            not isinstance(upstream_cursor, str)
+            or len(upstream_cursor) > _MAX_SKELETON_CURSOR_LEN
+            or "\x00" in upstream_cursor
+        ):
+            data["cursor"] = None
     return data
 
 

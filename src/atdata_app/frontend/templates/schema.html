@@ -22,10 +22,10 @@
             {% if schema.dtype is defined %}
             <tr><th>Data Type</th><td><code>{{ schema.dtype }}</code></td></tr>
             {% endif %}
-            {% if schema.shape is defined %}
+            {% if schema.shape is defined and schema.shape is iterable and schema.shape is not string %}
             <tr><th>Shape</th><td><code>{{ schema.shape | join(" × ") }}</code></td></tr>
             {% endif %}
-            {% if schema.dimensionNames is defined %}
+            {% if schema.dimensionNames is defined and schema.dimensionNames is iterable and schema.dimensionNames is not string %}
             <tr><th>Dimensions</th><td>{{ schema.dimensionNames | join(", ") }}</td></tr>
             {% endif %}
             <tr><th>Version</th><td>{{ schema.version }}</td></tr>

@@ -394,8 +394,10 @@ _PROC = "atdata_app.xrpc.procedures"
 
 
 @pytest.mark.asyncio
+@patch(f"{_PROC}.verify_service_auth", new_callable=AsyncMock)
 @patch(f"{_PROC}.fire_analytics_event")
-async def test_send_interactions_valid_batch(mock_fire, config, pool):
+async def test_send_interactions_valid_batch(mock_fire, mock_auth, config, pool):
+    mock_auth.return_value = MagicMock(iss="did:plc:caller")
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -424,8 +426,10 @@ async def test_send_interactions_valid_batch(mock_fire, config, pool):
 
 
 @pytest.mark.asyncio
+@patch(f"{_PROC}.verify_service_auth", new_callable=AsyncMock)
 @patch(f"{_PROC}.fire_analytics_event")
-async def test_send_interactions_empty_array(mock_fire, config, pool):
+async def test_send_interactions_empty_array(mock_fire, mock_auth, config, pool):
+    mock_auth.return_value = MagicMock(iss="did:plc:caller")
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -440,8 +444,10 @@ async def test_send_interactions_empty_array(mock_fire, config, pool):
 
 
 @pytest.mark.asyncio
+@patch(f"{_PROC}.verify_service_auth", new_callable=AsyncMock)
 @patch(f"{_PROC}.fire_analytics_event")
-async def test_send_interactions_invalid_uri(mock_fire, config, pool):
+async def test_send_interactions_invalid_uri(mock_fire, mock_auth, config, pool):
+    mock_auth.return_value = MagicMock(iss="did:plc:caller")
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -460,8 +466,10 @@ async def test_send_interactions_invalid_uri(mock_fire, config, pool):
 
 
 @pytest.mark.asyncio
+@patch(f"{_PROC}.verify_service_auth", new_callable=AsyncMock)
 @patch(f"{_PROC}.fire_analytics_event")
-async def test_send_interactions_invalid_type(mock_fire, config, pool):
+async def test_send_interactions_invalid_type(mock_fire, mock_auth, config, pool):
+    mock_auth.return_value = MagicMock(iss="did:plc:caller")
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -483,8 +491,10 @@ async def test_send_interactions_invalid_type(mock_fire, config, pool):
 
 
 @pytest.mark.asyncio
+@patch(f"{_PROC}.verify_service_auth", new_callable=AsyncMock)
 @patch(f"{_PROC}.fire_analytics_event")
-async def test_send_interactions_batch_size_exceeded(mock_fire, config, pool):
+async def test_send_interactions_batch_size_exceeded(mock_fire, mock_auth, config, pool):
+    mock_auth.return_value = MagicMock(iss="did:plc:caller")
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     interactions = [
@@ -503,8 +513,11 @@ async def test_send_interactions_batch_size_exceeded(mock_fire, config, pool):
 
 
 @pytest.mark.asyncio
+@patch(f"{_PROC}.verify_service_auth", new_callable=AsyncMock)
 @patch(f"{_PROC}.fire_analytics_event")
-async def test_send_interactions_invalid_timestamp(mock_fire, config, pool):
+async def test_send_interactions_ignores_timestamp(mock_fire, mock_auth, config, pool):
+    """Timestamp field is accepted but not validated (informational only)."""
+    mock_auth.return_value = MagicMock(iss="did:plc:caller")
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -521,14 +534,15 @@ async def test_send_interactions_invalid_timestamp(mock_fire, config, pool):
             },
         )
 
-    assert resp.status_code == 400
-    assert "invalid ISO 8601 timestamp" in resp.json()["detail"]
-    mock_fire.assert_not_called()
+    assert resp.status_code == 200
+    assert mock_fire.call_count == 1
 
 
 @pytest.mark.asyncio
+@patch(f"{_PROC}.verify_service_auth", new_callable=AsyncMock)
 @patch(f"{_PROC}.fire_analytics_event")
-async def test_send_interactions_missing_dataset_uri(mock_fire, config, pool):
+async def test_send_interactions_missing_dataset_uri(mock_fire, mock_auth, config, pool):
+    mock_auth.return_value = MagicMock(iss="did:plc:caller")
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -547,8 +561,10 @@ async def test_send_interactions_missing_dataset_uri(mock_fire, config, pool):
 
 
 @pytest.mark.asyncio
+@patch(f"{_PROC}.verify_service_auth", new_callable=AsyncMock)
 @patch(f"{_PROC}.fire_analytics_event")
-async def test_send_interactions_not_an_array(mock_fire, config, pool):
+async def test_send_interactions_not_an_array(mock_fire, mock_auth, config, pool):
+    mock_auth.return_value = MagicMock(iss="did:plc:caller")
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -563,8 +579,10 @@ async def test_send_interactions_not_an_array(mock_fire, config, pool):
 
 
 @pytest.mark.asyncio
+@patch(f"{_PROC}.verify_service_auth", new_callable=AsyncMock)
 @patch(f"{_PROC}.fire_analytics_event")
-async def test_send_interactions_all_three_types(mock_fire, config, pool):
+async def test_send_interactions_all_three_types(mock_fire, mock_auth, config, pool):
+    mock_auth.return_value = MagicMock(iss="did:plc:caller")
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -593,9 +611,11 @@ async def test_send_interactions_all_three_types(mock_fire, config, pool):
 
 
 @pytest.mark.asyncio
+@patch(f"{_PROC}.verify_service_auth", new_callable=AsyncMock)
 @patch(f"{_PROC}.fire_analytics_event")
-async def test_send_interactions_missing_key(mock_fire, config, pool):
+async def test_send_interactions_missing_key(mock_fire, mock_auth, config, pool):
     """Body without 'interactions' key should return 400."""
+    mock_auth.return_value = MagicMock(iss="did:plc:caller")
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -610,9 +630,11 @@ async def test_send_interactions_missing_key(mock_fire, config, pool):
 
 
 @pytest.mark.asyncio
+@patch(f"{_PROC}.verify_service_auth", new_callable=AsyncMock)
 @patch(f"{_PROC}.fire_analytics_event")
-async def test_send_interactions_non_dict_item(mock_fire, config, pool):
+async def test_send_interactions_non_dict_item(mock_fire, mock_auth, config, pool):
     """Non-object items in the interactions array should return 400."""
+    mock_auth.return_value = MagicMock(iss="did:plc:caller")
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -627,9 +649,11 @@ async def test_send_interactions_non_dict_item(mock_fire, config, pool):
 
 
 @pytest.mark.asyncio
+@patch(f"{_PROC}.verify_service_auth", new_callable=AsyncMock)
 @patch(f"{_PROC}.fire_analytics_event")
-async def test_send_interactions_boundary_at_max(mock_fire, config, pool):
+async def test_send_interactions_boundary_at_max(mock_fire, mock_auth, config, pool):
     """Exactly 100 interactions (the maximum) should succeed."""
+    mock_auth.return_value = MagicMock(iss="did:plc:caller")
     app = _mock_app(config, pool)
     transport = ASGITransport(app=app)
     interactions = [

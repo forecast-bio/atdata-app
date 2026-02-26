@@ -7,6 +7,10 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
+import ipaddress
+import socket
+from urllib.parse import urlparse
+
 import httpx
 
 from atdata_app import get_resolver
@@ -374,21 +378,55 @@ async def list_indexes(
 # ---------------------------------------------------------------------------
 
 
+def _validate_endpoint_url(url: str) -> None:
+    """Reject URLs that could cause SSRF (private IPs, non-HTTPS, credentials).
+
+    Raises ``HTTPException`` (400) if the URL is unsafe.
+    """
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Malformed endpoint URL")
+
+    if parsed.scheme != "https":
+        raise HTTPException(status_code=400, detail="Endpoint URL must use HTTPS")
+    if not parsed.hostname:
+        raise HTTPException(status_code=400, detail="Endpoint URL missing hostname")
+    if parsed.username or parsed.password:
+        raise HTTPException(status_code=400, detail="Endpoint URL must not contain credentials")
+
+    # Resolve hostname and block private/reserved IP ranges
+    try:
+        infos = socket.getaddrinfo(parsed.hostname, None, proto=socket.IPPROTO_TCP)
+    except socket.gaierror:
+        raise HTTPException(status_code=502, detail="Index provider hostname unresolvable")
+
+    for _family, _type, _proto, _canonname, sockaddr in infos:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if ip.is_private or ip.is_reserved or ip.is_loopback or ip.is_link_local:
+            raise HTTPException(
+                status_code=400,
+                detail="Endpoint URL must not resolve to a private/reserved IP address",
+            )
+
+
 async def _fetch_skeleton(
     endpoint_url: str,
     cursor: str | None,
     limit: int,
 ) -> dict[str, Any]:
     """Fetch skeleton from an upstream index provider."""
+    _validate_endpoint_url(endpoint_url)
+
     params: dict[str, Any] = {"limit": limit}
     if cursor:
         params["cursor"] = cursor
     async with httpx.AsyncClient(timeout=10.0) as http:
         try:
             resp = await http.get(endpoint_url, params=params)
-        except httpx.HTTPError as e:
+        except (httpx.HTTPError, ValueError) as e:
             raise HTTPException(
-                status_code=502, detail=f"Index provider unreachable: {e}"
+                status_code=502, detail="Index provider unreachable"
             ) from e
     if resp.status_code != 200:
         raise HTTPException(
@@ -399,12 +437,14 @@ async def _fetch_skeleton(
         data = resp.json()
     except (ValueError, KeyError) as e:
         raise HTTPException(
-            status_code=502, detail=f"Invalid response from index provider: {e}"
+            status_code=502, detail="Invalid response from index provider"
         ) from e
     if not isinstance(data.get("items"), list):
         raise HTTPException(
             status_code=502, detail="Index provider response missing 'items' array"
         )
+    # Cap items to the requested limit regardless of what upstream returns
+    data["items"] = data["items"][:limit]
     return data
 
 

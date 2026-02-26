@@ -204,6 +204,21 @@ async def upsert_lens(
         )
 
 
+def _is_safe_endpoint_url(url: str) -> bool:
+    """Return True if *url* is HTTPS with no credentials or private IPs."""
+    from urllib.parse import urlparse
+
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    if parsed.scheme != "https" or not parsed.hostname:
+        return False
+    if parsed.username or parsed.password:
+        return False
+    return True
+
+
 async def upsert_index_provider(
     pool: asyncpg.Pool,
     did: str,
@@ -211,6 +226,12 @@ async def upsert_index_provider(
     cid: str | None,
     record: dict[str, Any],
 ) -> None:
+    endpoint_url = record.get("endpointUrl", "")
+    if not _is_safe_endpoint_url(endpoint_url):
+        logger.warning(
+            "Rejected index provider %s/%s: unsafe endpoint URL %s", did, rkey, endpoint_url
+        )
+        return
     async with pool.acquire() as conn:
         await conn.execute(
             """
@@ -686,6 +707,9 @@ async def record_analytics_event(
         logger.warning("Failed to record analytics event %s", event_type, exc_info=True)
 
 
+_background_tasks: set[asyncio.Task] = set()
+
+
 def fire_analytics_event(
     pool: asyncpg.Pool,
     event_type: str,
@@ -694,9 +718,11 @@ def fire_analytics_event(
     query_params: dict[str, Any] | None = None,
 ) -> None:
     """Fire-and-forget analytics recording. Does not block the caller."""
-    asyncio.create_task(
+    task = asyncio.create_task(
         record_analytics_event(pool, event_type, target_did, target_rkey, query_params)
     )
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
 
 
 PERIOD_INTERVALS: dict[str, timedelta] = {

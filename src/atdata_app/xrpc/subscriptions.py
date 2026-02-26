@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 
@@ -26,10 +27,17 @@ async def subscribe_changes(websocket: WebSocket) -> None:
     await websocket.accept()
 
     cursor_param = websocket.query_params.get("cursor")
-    sub_id, queue = change_stream.subscribe()
 
     try:
-        # Replay buffered events if cursor provided
+        sub_id, queue = change_stream.subscribe()
+    except RuntimeError:
+        await websocket.close(code=1013, reason="Too many subscribers")
+        return
+
+    try:
+        # Replay buffered events if cursor provided, tracking last seq
+        # to deduplicate against events that also landed in the live queue.
+        last_replayed_seq = 0
         if cursor_param is not None:
             try:
                 cursor = int(cursor_param)
@@ -39,11 +47,27 @@ async def subscribe_changes(websocket: WebSocket) -> None:
             missed = change_stream.replay_from(cursor)
             for event in missed:
                 await websocket.send_text(json.dumps(event.to_dict()))
+                last_replayed_seq = event.seq
 
-        # Stream live events
+        # Stream live events with periodic keepalive on idle
         while True:
-            event = await queue.get()
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=30.0)
+            except asyncio.TimeoutError:
+                # No events for 30s — send keepalive to detect dead connections
+                await websocket.send_text(json.dumps({"type": "keepalive"}))
+                continue
+
+            # Deduplicate events already sent during replay
+            if event.seq <= last_replayed_seq:
+                continue
             await websocket.send_text(json.dumps(event.to_dict()))
+            # Check if we were marked as dropped due to backpressure
+            if change_stream.is_dropped(sub_id):
+                await websocket.close(
+                    code=4000, reason="Backpressure: events were dropped"
+                )
+                return
 
     except WebSocketDisconnect:
         logger.debug("Subscriber %d disconnected", sub_id)

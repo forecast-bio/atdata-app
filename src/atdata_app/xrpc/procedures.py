@@ -7,7 +7,6 @@ then proxies ``com.atproto.repo.createRecord`` to the caller's PDS.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 from typing import Any
 from urllib.parse import urlparse
 
@@ -319,14 +318,11 @@ _VALID_INTERACTION_TYPES = frozenset({"download", "citation", "derivative"})
 _MAX_INTERACTIONS_BATCH = 100
 
 
-def _validate_iso8601(value: str) -> None:
-    """Raise ValueError if *value* is not a valid ISO 8601 datetime string."""
-    # datetime.fromisoformat handles the common subset we accept
-    datetime.fromisoformat(value)
-
-
 @router.post("/science.alt.dataset.sendInteractions")
 async def send_interactions(request: Request) -> dict[str, Any]:
+    """Record dataset interaction events (anonymous, fire-and-forget)."""
+    await verify_service_auth(request, "science.alt.dataset.sendInteractions")
+
     pool = request.app.state.db_pool
 
     body = await request.json()
@@ -364,21 +360,6 @@ async def send_interactions(request: Request) -> dict[str, Any]:
                 status_code=400,
                 detail=f"interactions[{i}]: invalid AT-URI: {dataset_uri}",
             )
-
-        timestamp = item.get("timestamp")
-        if timestamp is not None:
-            if not isinstance(timestamp, str):
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"interactions[{i}]: timestamp must be a string",
-                )
-            try:
-                _validate_iso8601(timestamp)
-            except ValueError:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"interactions[{i}]: invalid ISO 8601 timestamp: {timestamp}",
-                )
 
     # All valid — fire analytics events
     for item in interactions:

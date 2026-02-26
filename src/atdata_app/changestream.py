@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_BUFFER_SIZE = 1000
 DEFAULT_SUBSCRIBER_QUEUE_SIZE = 256
+DEFAULT_MAX_SUBSCRIBERS = 1000
 
 
 @dataclass
@@ -57,11 +58,13 @@ class ChangeStream:
 
     buffer_size: int = DEFAULT_BUFFER_SIZE
     subscriber_queue_size: int = DEFAULT_SUBSCRIBER_QUEUE_SIZE
+    max_subscribers: int = DEFAULT_MAX_SUBSCRIBERS
     _seq: int = field(default=0, init=False)
     _buffer: deque[ChangeEvent] = field(init=False)
     _subscribers: dict[int, asyncio.Queue[ChangeEvent]] = field(
         default_factory=dict, init=False
     )
+    _dropped_subs: set[int] = field(default_factory=set, init=False)
     _next_sub_id: int = field(default=0, init=False)
 
     def __post_init__(self) -> None:
@@ -70,9 +73,8 @@ class ChangeStream:
     def publish(self, event: ChangeEvent) -> None:
         """Publish an event to all subscribers and the replay buffer.
 
-        Non-blocking. If a subscriber's queue is full, the event is dropped
-        for that subscriber (backpressure via disconnect is handled by the
-        WebSocket handler).
+        Non-blocking. If a subscriber's queue is full, the subscriber is
+        marked as dropped so the WebSocket handler can close the connection.
         """
         self._seq += 1
         event.seq = self._seq
@@ -83,13 +85,21 @@ class ChangeStream:
                 queue.put_nowait(event)
             except asyncio.QueueFull:
                 logger.warning(
-                    "Subscriber %d queue full, dropping event seq=%d",
+                    "Subscriber %d queue full at seq=%d — marking for disconnect",
                     sub_id,
                     event.seq,
                 )
+                self._dropped_subs.add(sub_id)
 
     def subscribe(self) -> tuple[int, asyncio.Queue[ChangeEvent]]:
-        """Create a new subscriber. Returns (subscriber_id, queue)."""
+        """Create a new subscriber. Returns (subscriber_id, queue).
+
+        Raises ``RuntimeError`` if the maximum subscriber count is reached.
+        """
+        if len(self._subscribers) >= self.max_subscribers:
+            raise RuntimeError(
+                f"Maximum subscriber count ({self.max_subscribers}) reached"
+            )
         sub_id = self._next_sub_id
         self._next_sub_id += 1
         queue: asyncio.Queue[ChangeEvent] = asyncio.Queue(
@@ -102,7 +112,12 @@ class ChangeStream:
     def unsubscribe(self, sub_id: int) -> None:
         """Remove a subscriber."""
         self._subscribers.pop(sub_id, None)
+        self._dropped_subs.discard(sub_id)
         logger.debug("Subscriber %d disconnected (total: %d)", sub_id, len(self._subscribers))
+
+    def is_dropped(self, sub_id: int) -> bool:
+        """Return True if the subscriber was dropped due to backpressure."""
+        return sub_id in self._dropped_subs
 
     def replay_from(self, cursor: int) -> list[ChangeEvent]:
         """Return buffered events with seq > cursor.

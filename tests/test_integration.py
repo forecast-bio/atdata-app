@@ -162,6 +162,7 @@ class TestSchemaValidation:
             "entries",
             "labels",
             "lenses",
+            "index_providers",
             "cursor_state",
             "analytics_events",
             "analytics_counters",
@@ -196,6 +197,8 @@ class TestSchemaValidation:
             "idx_lenses_did",
             "idx_analytics_events_type_created",
             "idx_analytics_events_target",
+            "idx_index_providers_did",
+            "idx_index_providers_indexed_at",
         }
         async with db_pool.acquire() as conn:
             rows = await conn.fetch(

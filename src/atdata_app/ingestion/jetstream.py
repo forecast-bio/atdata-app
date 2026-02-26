@@ -52,7 +52,9 @@ async def jetstream_consumer(app: FastAPI) -> None:
                     if event.get("kind") != "commit":
                         continue
 
-                    await process_commit(pool, event)
+                    await process_commit(
+                        pool, event, getattr(app.state, "change_stream", None)
+                    )
 
                     last_time_us = event.get("time_us")
                     msg_count += 1

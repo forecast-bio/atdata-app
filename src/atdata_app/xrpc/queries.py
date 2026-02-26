@@ -7,6 +7,12 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
+import ipaddress
+import socket
+from urllib.parse import urlparse
+
+import httpx
+
 from atdata_app import get_resolver
 from atdata_app.database import (
     COLLECTION_TABLE_MAP,
@@ -16,8 +22,10 @@ from atdata_app.database import (
     query_entry_stats,
     query_get_entries,
     query_get_entry,
+    query_get_index_provider,
     query_get_schema,
     query_list_entries,
+    query_list_index_providers,
     query_list_lenses,
     query_list_schemas,
     query_record_counts,
@@ -32,7 +40,10 @@ from atdata_app.models import (
     GetEntriesResponse,
     GetEntryResponse,
     GetEntryStatsResponse,
+    IndexResponse,
+    IndexSkeletonResponse,
     ListEntriesResponse,
+    ListIndexesResponse,
     ListLensesResponse,
     ListSchemasResponse,
     ResolveBlobsResponse,
@@ -44,6 +55,7 @@ from atdata_app.models import (
     parse_at_uri,
     parse_cursor,
     row_to_entry,
+    row_to_index_provider,
     row_to_label,
     row_to_lens,
     row_to_schema,
@@ -337,6 +349,203 @@ async def search_lenses(
     return SearchLensesResponse(
         lenses=[row_to_lens(r) for r in rows],
         cursor=maybe_cursor(rows, limit),
+    )
+
+
+# ---------------------------------------------------------------------------
+# listIndexes
+# ---------------------------------------------------------------------------
+
+
+@router.get("/science.alt.dataset.listIndexes")
+async def list_indexes(
+    request: Request,
+    repo: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=100),
+    cursor: str | None = Query(None),
+) -> ListIndexesResponse:
+    pool = request.app.state.db_pool
+    c_at, c_did, c_rkey = parse_cursor(cursor)
+    rows = await query_list_index_providers(pool, repo, limit, c_did, c_rkey, c_at)
+    return ListIndexesResponse(
+        indexes=[row_to_index_provider(r) for r in rows],
+        cursor=maybe_cursor(rows, limit),
+    )
+
+
+# ---------------------------------------------------------------------------
+# getIndexSkeleton
+# ---------------------------------------------------------------------------
+
+
+def _validate_endpoint_url(url: str) -> None:
+    """Reject URLs that could cause SSRF (private IPs, non-HTTPS, credentials).
+
+    Raises ``HTTPException`` (400) if the URL is unsafe.
+    """
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Malformed endpoint URL")
+
+    if parsed.scheme != "https":
+        raise HTTPException(status_code=400, detail="Endpoint URL must use HTTPS")
+    if not parsed.hostname:
+        raise HTTPException(status_code=400, detail="Endpoint URL missing hostname")
+    if parsed.username or parsed.password:
+        raise HTTPException(status_code=400, detail="Endpoint URL must not contain credentials")
+
+    # Resolve hostname and block private/reserved IP ranges
+    try:
+        infos = socket.getaddrinfo(parsed.hostname, None, proto=socket.IPPROTO_TCP)
+    except socket.gaierror:
+        raise HTTPException(status_code=502, detail="Index provider hostname unresolvable")
+
+    for _family, _type, _proto, _canonname, sockaddr in infos:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if ip.is_private or ip.is_reserved or ip.is_loopback or ip.is_link_local:
+            raise HTTPException(
+                status_code=400,
+                detail="Endpoint URL must not resolve to a private/reserved IP address",
+            )
+
+
+_MAX_SKELETON_RESPONSE_BYTES = 1_048_576  # 1 MiB
+_MAX_SKELETON_CURSOR_LEN = 512
+
+
+async def _fetch_skeleton(
+    endpoint_url: str,
+    cursor: str | None,
+    limit: int,
+) -> dict[str, Any]:
+    """Fetch skeleton from an upstream index provider."""
+    _validate_endpoint_url(endpoint_url)
+
+    if cursor is not None:
+        if len(cursor) > _MAX_SKELETON_CURSOR_LEN or "\x00" in cursor:
+            raise HTTPException(status_code=400, detail="Invalid cursor value")
+
+    params: dict[str, Any] = {"limit": limit}
+    if cursor:
+        params["cursor"] = cursor
+    async with httpx.AsyncClient(timeout=10.0) as http:
+        try:
+            resp = await http.get(endpoint_url, params=params)
+        except (httpx.HTTPError, ValueError) as e:
+            raise HTTPException(
+                status_code=502, detail="Index provider unreachable"
+            ) from e
+    if resp.status_code != 200:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Index provider returned {resp.status_code}",
+        )
+    # Reject oversized responses to prevent memory exhaustion
+    content_length = resp.headers.get("content-length")
+    if content_length and int(content_length) > _MAX_SKELETON_RESPONSE_BYTES:
+        raise HTTPException(
+            status_code=502, detail="Index provider response too large"
+        )
+    if len(resp.content) > _MAX_SKELETON_RESPONSE_BYTES:
+        raise HTTPException(
+            status_code=502, detail="Index provider response too large"
+        )
+    try:
+        data = resp.json()
+    except (ValueError, KeyError) as e:
+        raise HTTPException(
+            status_code=502, detail="Invalid response from index provider"
+        ) from e
+    if not isinstance(data.get("items"), list):
+        raise HTTPException(
+            status_code=502, detail="Index provider response missing 'items' array"
+        )
+    # Cap items to the requested limit regardless of what upstream returns
+    data["items"] = data["items"][:limit]
+    # Whitelist item fields — only pass through 'uri' to prevent injection
+    data["items"] = [{"uri": item.get("uri", "")} for item in data["items"]]
+    # Validate upstream cursor
+    upstream_cursor = data.get("cursor")
+    if upstream_cursor is not None:
+        if (
+            not isinstance(upstream_cursor, str)
+            or len(upstream_cursor) > _MAX_SKELETON_CURSOR_LEN
+            or "\x00" in upstream_cursor
+        ):
+            data["cursor"] = None
+    return data
+
+
+@router.get("/science.alt.dataset.getIndexSkeleton")
+async def get_index_skeleton(
+    request: Request,
+    index: str = Query(...),
+    cursor: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=100),
+) -> IndexSkeletonResponse:
+    pool = request.app.state.db_pool
+    try:
+        did, _, rkey = parse_at_uri(index)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid AT-URI for index")
+    provider = await query_get_index_provider(pool, did, rkey)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Index provider not found")
+
+    data = await _fetch_skeleton(provider["endpoint_url"], cursor, limit)
+    return IndexSkeletonResponse(
+        items=data["items"],
+        cursor=data.get("cursor"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# getIndex (hydrated)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/science.alt.dataset.getIndex")
+async def get_index(
+    request: Request,
+    index: str = Query(...),
+    cursor: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=100),
+) -> IndexResponse:
+    pool = request.app.state.db_pool
+    try:
+        did, _, rkey = parse_at_uri(index)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid AT-URI for index")
+    provider = await query_get_index_provider(pool, did, rkey)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Index provider not found")
+
+    data = await _fetch_skeleton(provider["endpoint_url"], cursor, limit)
+
+    # Parse URIs from skeleton items and hydrate
+    keys: list[tuple[str, str]] = []
+    for item in data["items"]:
+        uri = item.get("uri", "")
+        try:
+            entry_did, _, entry_rkey = parse_at_uri(uri)
+            keys.append((entry_did, entry_rkey))
+        except ValueError:
+            continue  # skip malformed URIs
+
+    rows = await query_get_entries(pool, keys)
+
+    # Build a lookup map to preserve skeleton ordering
+    row_map = {(r["did"], r["rkey"]): r for r in rows}
+    hydrated = []
+    for entry_did, entry_rkey in keys:
+        row = row_map.get((entry_did, entry_rkey))
+        if row:
+            hydrated.append(row_to_entry(row))
+
+    return IndexResponse(
+        items=hydrated,
+        cursor=data.get("cursor"),
     )
 
 

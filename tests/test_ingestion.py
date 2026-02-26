@@ -8,7 +8,6 @@ import pytest
 
 from atdata_app.ingestion.processor import process_commit
 
-# All patches target the `db` module reference used inside processor.py
 _DB = "atdata_app.database"
 
 
@@ -44,15 +43,22 @@ def _make_event(
     }
 
 
+def _patch_upsert(table: str):
+    """Patch a single entry in UPSERT_FNS by table name."""
+    mock = AsyncMock()
+    return patch.dict(f"{_DB}.UPSERT_FNS", {table: mock}), mock
+
+
 @pytest.mark.asyncio
-@patch(f"{_DB}.upsert_entry", new_callable=AsyncMock)
-async def test_process_commit_create(mock_upsert):
-    pool = AsyncMock()
-    event = _make_event(operation="create")
-    await process_commit(pool, event)
-    mock_upsert.assert_called_once_with(
-        pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
-    )
+async def test_process_commit_create():
+    patcher, mock_upsert = _patch_upsert("entries")
+    with patcher:
+        pool = AsyncMock()
+        event = _make_event(operation="create")
+        await process_commit(pool, event)
+        mock_upsert.assert_called_once_with(
+            pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
+        )
 
 
 @pytest.mark.asyncio
@@ -72,85 +78,109 @@ async def test_process_commit_delete(mock_delete):
 
 
 @pytest.mark.asyncio
-@patch(f"{_DB}.upsert_schema", new_callable=AsyncMock)
-async def test_process_commit_schema(mock_upsert):
-    pool = AsyncMock()
-    event = _make_event(
-        collection="science.alt.dataset.schema",
-        record={
-            "$type": "science.alt.dataset.schema",
-            "name": "TestSchema",
-            "version": "1.0.0",
-            "schemaType": "jsonSchema",
-            "schema": {"$type": "science.alt.dataset.schema#jsonSchemaFormat"},
-            "createdAt": "2025-01-01T00:00:00Z",
-        },
-    )
-    await process_commit(pool, event)
-    mock_upsert.assert_called_once_with(
-        pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
-    )
+async def test_process_commit_schema():
+    patcher, mock_upsert = _patch_upsert("schemas")
+    with patcher:
+        pool = AsyncMock()
+        event = _make_event(
+            collection="science.alt.dataset.schema",
+            record={
+                "$type": "science.alt.dataset.schema",
+                "name": "TestSchema",
+                "version": "1.0.0",
+                "schemaType": "jsonSchema",
+                "schema": {"$type": "science.alt.dataset.schema#jsonSchemaFormat"},
+                "createdAt": "2025-01-01T00:00:00Z",
+            },
+        )
+        await process_commit(pool, event)
+        mock_upsert.assert_called_once_with(
+            pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
+        )
 
 
 @pytest.mark.asyncio
-@patch(f"{_DB}.upsert_label", new_callable=AsyncMock)
-async def test_process_commit_label(mock_upsert):
-    pool = AsyncMock()
-    event = _make_event(
-        collection="science.alt.dataset.label",
-        record={
-            "$type": "science.alt.dataset.label",
-            "name": "mnist",
-            "datasetUri": "at://did:plc:test/science.alt.dataset.entry/3xyz",
-            "createdAt": "2025-01-01T00:00:00Z",
-        },
-    )
-    await process_commit(pool, event)
-    mock_upsert.assert_called_once_with(
-        pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
-    )
+async def test_process_commit_label():
+    patcher, mock_upsert = _patch_upsert("labels")
+    with patcher:
+        pool = AsyncMock()
+        event = _make_event(
+            collection="science.alt.dataset.label",
+            record={
+                "$type": "science.alt.dataset.label",
+                "name": "mnist",
+                "datasetUri": "at://did:plc:test/science.alt.dataset.entry/3xyz",
+                "createdAt": "2025-01-01T00:00:00Z",
+            },
+        )
+        await process_commit(pool, event)
+        mock_upsert.assert_called_once_with(
+            pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
+        )
 
 
 @pytest.mark.asyncio
-@patch(f"{_DB}.upsert_lens", new_callable=AsyncMock)
-async def test_process_commit_lens(mock_upsert):
-    pool = AsyncMock()
-    event = _make_event(
-        collection="science.alt.dataset.lens",
-        record={
-            "$type": "science.alt.dataset.lens",
-            "name": "test-lens",
-            "sourceSchema": "at://did:plc:test/science.alt.dataset.schema/a@1.0.0",
-            "targetSchema": "at://did:plc:test/science.alt.dataset.schema/b@1.0.0",
-            "getterCode": {"repository": "https://github.com/test/repo", "commit": "abc", "path": "get.py"},
-            "putterCode": {"repository": "https://github.com/test/repo", "commit": "abc", "path": "put.py"},
-            "createdAt": "2025-01-01T00:00:00Z",
-        },
-    )
-    await process_commit(pool, event)
-    mock_upsert.assert_called_once_with(
-        pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
-    )
+async def test_process_commit_lens():
+    patcher, mock_upsert = _patch_upsert("lenses")
+    with patcher:
+        pool = AsyncMock()
+        event = _make_event(
+            collection="science.alt.dataset.lens",
+            record={
+                "$type": "science.alt.dataset.lens",
+                "name": "test-lens",
+                "sourceSchema": "at://did:plc:test/science.alt.dataset.schema/a@1.0.0",
+                "targetSchema": "at://did:plc:test/science.alt.dataset.schema/b@1.0.0",
+                "getterCode": {"repository": "https://github.com/test/repo", "commit": "abc", "path": "get.py"},
+                "putterCode": {"repository": "https://github.com/test/repo", "commit": "abc", "path": "put.py"},
+                "createdAt": "2025-01-01T00:00:00Z",
+            },
+        )
+        await process_commit(pool, event)
+        mock_upsert.assert_called_once_with(
+            pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
+        )
 
 
 @pytest.mark.asyncio
-@patch(f"{_DB}.upsert_entry", new_callable=AsyncMock)
-async def test_process_commit_update(mock_upsert):
+async def test_process_commit_index_provider():
+    patcher, mock_upsert = _patch_upsert("index_providers")
+    with patcher:
+        pool = AsyncMock()
+        event = _make_event(
+            collection="science.alt.dataset.index",
+            record={
+                "$type": "science.alt.dataset.index",
+                "name": "Genomics Index",
+                "endpointUrl": "https://example.com/skeleton",
+                "createdAt": "2025-01-01T00:00:00Z",
+            },
+        )
+        await process_commit(pool, event)
+        mock_upsert.assert_called_once_with(
+            pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
+        )
+
+
+@pytest.mark.asyncio
+async def test_process_commit_update():
     """Update operations should route to the same upsert function as create."""
-    pool = AsyncMock()
-    event = _make_event(operation="update")
-    await process_commit(pool, event)
-    mock_upsert.assert_called_once_with(
-        pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
-    )
+    patcher, mock_upsert = _patch_upsert("entries")
+    with patcher:
+        pool = AsyncMock()
+        event = _make_event(operation="update")
+        await process_commit(pool, event)
+        mock_upsert.assert_called_once_with(
+            pool, "did:plc:test123", "3xyz", "bafytest", event["commit"]["record"]
+        )
 
 
 @pytest.mark.asyncio
-@patch(f"{_DB}.upsert_entry", new_callable=AsyncMock)
-async def test_process_commit_upsert_error_is_caught(mock_upsert):
+async def test_process_commit_upsert_error_is_caught():
     """Upsert failures should be logged, not raised."""
-    mock_upsert.side_effect = Exception("db error")
-    pool = AsyncMock()
-    event = _make_event(operation="create")
-    # Should not raise
-    await process_commit(pool, event)
+    mock = AsyncMock(side_effect=Exception("db error"))
+    with patch.dict(f"{_DB}.UPSERT_FNS", {"entries": mock}):
+        pool = AsyncMock()
+        event = _make_event(operation="create")
+        # Should not raise
+        await process_commit(pool, event)

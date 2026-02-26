@@ -22,6 +22,7 @@ from atdata_app.database import (
 )
 from atdata_app.models import (
     maybe_cursor,
+    parse_at_uri,
     parse_cursor,
     row_to_entry,
     row_to_label,
@@ -100,10 +101,18 @@ async def dataset_detail(request: Request, did: str, rkey: str):
     schema_did = ""
     schema_rkey = ""
     schema_ref = entry.get("schemaRef", "")
-    if schema_ref.startswith("at://"):
-        parts = schema_ref[5:].split("/", 2)
-        if len(parts) == 3:
-            schema_did, _, schema_rkey = parts
+    if schema_ref:
+        try:
+            schema_did, _, schema_rkey = parse_at_uri(schema_ref)
+        except ValueError:
+            pass
+
+    # Fetch the referenced schema for inline display of format/annotation info
+    schema_info = None
+    if schema_did and schema_rkey:
+        schema_row = await query_get_schema(pool, schema_did, schema_rkey)
+        if schema_row:
+            schema_info = row_to_schema(schema_row)
 
     # Fetch labels pointing to this dataset
     dataset_uri = entry["uri"]
@@ -117,6 +126,7 @@ async def dataset_detail(request: Request, did: str, rkey: str):
             "entry": entry,
             "schema_did": schema_did,
             "schema_rkey": schema_rkey,
+            "schema_info": schema_info,
             "labels": labels,
         },
     )

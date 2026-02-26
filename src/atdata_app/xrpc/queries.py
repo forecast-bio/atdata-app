@@ -8,6 +8,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from atdata_app import get_resolver
+import httpx
+
 from atdata_app.database import (
     COLLECTION_TABLE_MAP,
     fire_analytics_event,
@@ -16,8 +18,10 @@ from atdata_app.database import (
     query_entry_stats,
     query_get_entries,
     query_get_entry,
+    query_get_index_provider,
     query_get_schema,
     query_list_entries,
+    query_list_index_providers,
     query_list_lenses,
     query_list_schemas,
     query_record_counts,
@@ -32,7 +36,10 @@ from atdata_app.models import (
     GetEntriesResponse,
     GetEntryResponse,
     GetEntryStatsResponse,
+    IndexResponse,
+    IndexSkeletonResponse,
     ListEntriesResponse,
+    ListIndexesResponse,
     ListLensesResponse,
     ListSchemasResponse,
     ResolveBlobsResponse,
@@ -44,6 +51,7 @@ from atdata_app.models import (
     parse_at_uri,
     parse_cursor,
     row_to_entry,
+    row_to_index_provider,
     row_to_label,
     row_to_lens,
     row_to_schema,
@@ -337,6 +345,138 @@ async def search_lenses(
     return SearchLensesResponse(
         lenses=[row_to_lens(r) for r in rows],
         cursor=maybe_cursor(rows, limit),
+    )
+
+
+# ---------------------------------------------------------------------------
+# listIndexes
+# ---------------------------------------------------------------------------
+
+
+@router.get("/science.alt.dataset.listIndexes")
+async def list_indexes(
+    request: Request,
+    repo: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=100),
+    cursor: str | None = Query(None),
+) -> ListIndexesResponse:
+    pool = request.app.state.db_pool
+    c_at, c_did, c_rkey = parse_cursor(cursor)
+    rows = await query_list_index_providers(pool, repo, limit, c_did, c_rkey, c_at)
+    return ListIndexesResponse(
+        indexes=[row_to_index_provider(r) for r in rows],
+        cursor=maybe_cursor(rows, limit),
+    )
+
+
+# ---------------------------------------------------------------------------
+# getIndexSkeleton
+# ---------------------------------------------------------------------------
+
+
+async def _fetch_skeleton(
+    endpoint_url: str,
+    cursor: str | None,
+    limit: int,
+) -> dict[str, Any]:
+    """Fetch skeleton from an upstream index provider."""
+    params: dict[str, Any] = {"limit": limit}
+    if cursor:
+        params["cursor"] = cursor
+    async with httpx.AsyncClient(timeout=10.0) as http:
+        try:
+            resp = await http.get(endpoint_url, params=params)
+        except httpx.HTTPError as e:
+            raise HTTPException(
+                status_code=502, detail=f"Index provider unreachable: {e}"
+            ) from e
+    if resp.status_code != 200:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Index provider returned {resp.status_code}",
+        )
+    try:
+        data = resp.json()
+    except (ValueError, KeyError) as e:
+        raise HTTPException(
+            status_code=502, detail=f"Invalid response from index provider: {e}"
+        ) from e
+    if not isinstance(data.get("items"), list):
+        raise HTTPException(
+            status_code=502, detail="Index provider response missing 'items' array"
+        )
+    return data
+
+
+@router.get("/science.alt.dataset.getIndexSkeleton")
+async def get_index_skeleton(
+    request: Request,
+    index: str = Query(...),
+    cursor: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=100),
+) -> IndexSkeletonResponse:
+    pool = request.app.state.db_pool
+    try:
+        did, _, rkey = parse_at_uri(index)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid AT-URI for index")
+    provider = await query_get_index_provider(pool, did, rkey)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Index provider not found")
+
+    data = await _fetch_skeleton(provider["endpoint_url"], cursor, limit)
+    return IndexSkeletonResponse(
+        items=data["items"],
+        cursor=data.get("cursor"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# getIndex (hydrated)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/science.alt.dataset.getIndex")
+async def get_index(
+    request: Request,
+    index: str = Query(...),
+    cursor: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=100),
+) -> IndexResponse:
+    pool = request.app.state.db_pool
+    try:
+        did, _, rkey = parse_at_uri(index)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid AT-URI for index")
+    provider = await query_get_index_provider(pool, did, rkey)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Index provider not found")
+
+    data = await _fetch_skeleton(provider["endpoint_url"], cursor, limit)
+
+    # Parse URIs from skeleton items and hydrate
+    keys: list[tuple[str, str]] = []
+    for item in data["items"]:
+        uri = item.get("uri", "")
+        try:
+            entry_did, _, entry_rkey = parse_at_uri(uri)
+            keys.append((entry_did, entry_rkey))
+        except ValueError:
+            continue  # skip malformed URIs
+
+    rows = await query_get_entries(pool, keys)
+
+    # Build a lookup map to preserve skeleton ordering
+    row_map = {(r["did"], r["rkey"]): r for r in rows}
+    hydrated = []
+    for entry_did, entry_rkey in keys:
+        row = row_map.get((entry_did, entry_rkey))
+        if row:
+            hydrated.append(row_to_entry(row))
+
+    return IndexResponse(
+        items=hydrated,
+        cursor=data.get("cursor"),
     )
 
 

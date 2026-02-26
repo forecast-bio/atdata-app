@@ -138,6 +138,21 @@ def row_to_label(row) -> dict[str, Any]:
     return d
 
 
+def row_to_index_provider(row) -> dict[str, Any]:
+    uri = make_at_uri(row["did"], "science.alt.dataset.index", row["rkey"])
+    d: dict[str, Any] = {
+        "uri": uri,
+        "cid": row["cid"],
+        "did": row["did"],
+        "name": row["name"],
+        "endpointUrl": row["endpoint_url"],
+        "createdAt": row["created_at"],
+    }
+    if row["description"]:
+        d["description"] = row["description"]
+    return d
+
+
 def row_to_lens(row) -> dict[str, Any]:
     uri = make_at_uri(row["did"], "science.alt.dataset.lens", row["rkey"])
     getter_code = row["getter_code"]
@@ -237,3 +252,18 @@ class GetEntryStatsResponse(BaseModel):
     views: int
     searchAppearances: int
     period: str
+
+
+class ListIndexesResponse(BaseModel):
+    indexes: list[dict[str, Any]]
+    cursor: str | None = None
+
+
+class IndexSkeletonResponse(BaseModel):
+    items: list[dict[str, Any]]
+    cursor: str | None = None
+
+
+class IndexResponse(BaseModel):
+    items: list[dict[str, Any]]
+    cursor: str | None = None

@@ -56,6 +56,8 @@ async def process_commit(pool: asyncpg.Pool, event: dict[str, Any]) -> None:
                 await db.upsert_label(pool, did, rkey, cid, record)
             elif table == "lenses":
                 await db.upsert_lens(pool, did, rkey, cid, record)
+            elif table == "index_providers":
+                await db.upsert_index_provider(pool, did, rkey, cid, record)
             logger.debug("Upserted %s %s/%s", collection, did, rkey)
         except Exception:
             logger.exception("Failed to upsert %s %s/%s", collection, did, rkey)

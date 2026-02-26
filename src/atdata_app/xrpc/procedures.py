@@ -19,6 +19,7 @@ from atdata_app.database import (
     query_get_schema,
     query_record_exists,
 )
+from urllib.parse import urlparse
 from atdata_app.models import parse_at_uri
 
 logger = logging.getLogger(__name__)
@@ -266,5 +267,43 @@ async def publish_lens(request: Request) -> dict[str, Any]:
     pds = await _resolve_pds(auth.iss)
     result = await _proxy_create_record(
         pds, pds_token, auth.iss, "science.alt.dataset.lens", record, rkey
+    )
+    return {"uri": result.get("uri"), "cid": result.get("cid")}
+
+
+# ---------------------------------------------------------------------------
+# publishIndex
+# ---------------------------------------------------------------------------
+
+
+@router.post("/science.alt.dataset.publishIndex")
+async def publish_index(request: Request) -> dict[str, Any]:
+    auth = await verify_service_auth(request, "science.alt.dataset.publishIndex")
+    pds_token = _require_pds_token(request)
+
+    body = await request.json()
+    record = body.get("record", {})
+    rkey = body.get("rkey")
+
+    record_type = record.get("$type", "")
+    if record_type and record_type != "science.alt.dataset.index":
+        raise HTTPException(status_code=400, detail="Invalid $type for index")
+
+    for field in ("name", "endpointUrl", "createdAt"):
+        if field not in record:
+            raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+
+    # Validate endpoint URL is HTTPS
+    parsed = urlparse(record["endpointUrl"])
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise HTTPException(
+            status_code=400, detail="endpointUrl must be a valid HTTPS URL"
+        )
+
+    record["$type"] = "science.alt.dataset.index"
+
+    pds = await _resolve_pds(auth.iss)
+    result = await _proxy_create_record(
+        pds, pds_token, auth.iss, "science.alt.dataset.index", record, rkey
     )
     return {"uri": result.get("uri"), "cid": result.get("cid")}

@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - DID document service entry updated from `#atproto_appview` / `AtprotoAppView` to `#atdata_appview` / `AtdataAppView`
 
 ### Added
-- Adversarial review: sendInteractions feature and surrounding code (round 3) (#39)
+- Add real-time change stream subscribeChanges endpoint (#50)
 - Add sendInteractions XRPC procedure for usage telemetry (#35)
 
 - Dual-hostname DID document support — serve different `did:web` documents for `api.atdata.app` (appview identity) and `atdata.app` (atproto account identity) based on the `Host` header ([#19](https://github.com/forecast-bio/atdata-app/issues/19))

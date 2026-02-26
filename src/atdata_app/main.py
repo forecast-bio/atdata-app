@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from atdata_app.changestream import ChangeStream
 from atdata_app.config import AppConfig
 from atdata_app.database import create_pool, run_migrations
 from atdata_app.frontend import router as frontend_router
@@ -29,6 +30,9 @@ _SHARED_PATH_PREFIXES = ("/xrpc/", "/.well-known/", "/health")
 async def lifespan(app: FastAPI):
     config: AppConfig = app.state.config
     logger.info("Starting atdata-app (DID: %s)", config.service_did)
+
+    # Change stream (must be created before background tasks)
+    app.state.change_stream = ChangeStream()
 
     # Database
     pool = await create_pool(config.database_url)

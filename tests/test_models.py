@@ -5,6 +5,8 @@ import base64
 import pytest
 
 from atdata_app.models import (
+    ARRAY_FORMAT_LABELS,
+    KNOWN_ARRAY_FORMATS,
     decode_cursor,
     encode_cursor,
     make_at_uri,
@@ -172,6 +174,95 @@ def test_row_to_schema_json_string_body():
     row = {**_SCHEMA_ROW, "schema_body": '{"type": "object"}'}
     d = row_to_schema(row)
     assert d["schema"] == {"type": "object"}
+
+
+def test_row_to_schema_no_array_format_fields_when_absent():
+    """Plain schemas should not gain arrayFormat/ndarray annotation keys."""
+    d = row_to_schema(_SCHEMA_ROW)
+    assert "arrayFormat" not in d
+    assert "arrayFormatLabel" not in d
+    assert "dtype" not in d
+    assert "shape" not in d
+    assert "dimensionNames" not in d
+
+
+# ---------------------------------------------------------------------------
+# row_to_schema — array format types
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("fmt", sorted(KNOWN_ARRAY_FORMATS))
+def test_row_to_schema_known_array_format(fmt):
+    """Each known format token should surface arrayFormat and a human label."""
+    row = {**_SCHEMA_ROW, "schema_body": {"arrayFormat": fmt}}
+    d = row_to_schema(row)
+    assert d["arrayFormat"] == fmt
+    assert d["arrayFormatLabel"] == ARRAY_FORMAT_LABELS[fmt]
+
+
+def test_row_to_schema_unknown_array_format_passes_through():
+    """Unknown format tokens are stored and surfaced as-is."""
+    row = {**_SCHEMA_ROW, "schema_body": {"arrayFormat": "futureFormat"}}
+    d = row_to_schema(row)
+    assert d["arrayFormat"] == "futureFormat"
+    assert d["arrayFormatLabel"] == "futureFormat"
+
+
+# ---------------------------------------------------------------------------
+# row_to_schema — ndarray v1.1.0 annotations
+# ---------------------------------------------------------------------------
+
+
+def test_row_to_schema_ndarray_annotations():
+    """ndarray v1.1.0 annotation fields are surfaced at top level."""
+    row = {
+        **_SCHEMA_ROW,
+        "schema_body": {
+            "arrayFormat": "numpyBytes",
+            "dtype": "float32",
+            "shape": [100, 200],
+            "dimensionNames": ["samples", "features"],
+        },
+    }
+    d = row_to_schema(row)
+    assert d["arrayFormat"] == "numpyBytes"
+    assert d["dtype"] == "float32"
+    assert d["shape"] == [100, 200]
+    assert d["dimensionNames"] == ["samples", "features"]
+
+
+def test_row_to_schema_ndarray_partial_annotations():
+    """Only present annotation fields should appear in output."""
+    row = {
+        **_SCHEMA_ROW,
+        "schema_body": {"arrayFormat": "sparseBytes", "dtype": "int64"},
+    }
+    d = row_to_schema(row)
+    assert d["dtype"] == "int64"
+    assert "shape" not in d
+    assert "dimensionNames" not in d
+
+
+# ---------------------------------------------------------------------------
+# KNOWN_ARRAY_FORMATS constant
+# ---------------------------------------------------------------------------
+
+
+def test_known_array_formats_contains_all_expected():
+    expected = {
+        "numpyBytes",
+        "parquetBytes",
+        "sparseBytes",
+        "structuredBytes",
+        "arrowTensor",
+        "safetensors",
+    }
+    assert KNOWN_ARRAY_FORMATS == expected
+
+
+def test_array_format_labels_covers_all_known():
+    """Every known format should have a human-readable label."""
+    assert set(ARRAY_FORMAT_LABELS.keys()) == KNOWN_ARRAY_FORMATS
 
 
 # ---------------------------------------------------------------------------

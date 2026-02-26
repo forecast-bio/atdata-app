@@ -21,6 +21,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Ingestion processor refactored to use `UPSERT_FNS` dispatch dict instead of if/elif chain
 - Index provider records (`science.alt.dataset.index`) added to `COLLECTION_TABLE_MAP` for firehose ingestion
 
+### Security
+
+- **SSRF protection**: Skeleton fetch now validates endpoint URLs with DNS resolution and blocks private/reserved IP ranges at both fetch time and firehose ingestion time
+- **Auth**: `sendInteractions` endpoint now requires ATProto service auth (was previously unauthenticated)
+- **XSS**: Storage URLs in dataset detail pages are only rendered as clickable links when using `http(s)://` schemes, preventing `javascript:` URI injection
+- **Input validation**: `publishIndex` rejects endpoint URLs containing embedded credentials or fragments; `sendInteractions` validates that URIs reference the `science.alt.dataset.entry` collection
+
+### Fixed
+
+- **ChangeStream backpressure**: Subscribers that fall behind are now tracked and explicitly disconnected with WebSocket close code 4000, instead of silently dropping events
+- **ChangeStream subscriber limit**: Capped at 1000 concurrent subscribers; new connections receive close code 1013 when full
+- **WebSocket keepalive**: Restructured the `subscribeChanges` event loop so the 30-second idle keepalive correctly re-enters the processing loop (was previously broken)
+- **Replay deduplication**: Track last replayed sequence number to prevent duplicate events when replay buffer overlaps with the live queue
+- **Task GC**: Fire-and-forget analytics tasks now retain references to prevent garbage collection before completion
+- **Skeleton response cap**: Enforce the requested `limit` on items returned by external index providers, and cap response body size to 1 MiB
+- **Skeleton item sanitization**: Whitelist upstream skeleton items to only the `uri` field; validate cursor strings for length and null bytes
+- **Query guard**: `query_get_entries` now rejects requests with more than 100 keys to prevent unbounded OR-clause queries
+- **Template robustness**: `shape` and `dimensionNames` join filters now guard against non-iterable data from malformed firehose records
+- Removed dead `_validate_iso8601` timestamp validation code from `sendInteractions`
+
 ## [0.3.0b1] - 2026-02-22
 
 ### Changed

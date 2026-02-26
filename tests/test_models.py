@@ -193,6 +193,7 @@ _LABEL_ROW = {
 def test_row_to_label():
     d = row_to_label(_LABEL_ROW)
     assert d["uri"] == "at://did:plc:abc/science.alt.dataset.label/3lbl"
+    assert d["did"] == "did:plc:abc"
     assert d["datasetUri"] == _LABEL_ROW["dataset_uri"]
     assert d["version"] == "1.0.0"
     assert d["description"] == "First version"
@@ -227,6 +228,7 @@ _LENS_ROW = {
 def test_row_to_lens():
     d = row_to_lens(_LENS_ROW)
     assert d["uri"] == "at://did:plc:abc/science.alt.dataset.lens/3lens"
+    assert d["did"] == "did:plc:abc"
     assert d["sourceSchema"] == _LENS_ROW["source_schema"]
     assert d["getterCode"] == _LENS_ROW["getter_code"]
     assert d["description"] == "Transforms A to B"

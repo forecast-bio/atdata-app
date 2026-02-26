@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from atdata_app.config import AppConfig
 from atdata_app.database import (
     fire_analytics_event,
     record_analytics_event,
@@ -29,16 +28,11 @@ _DB = "atdata_app.xrpc.queries"
 
 
 @pytest.fixture
-def config() -> AppConfig:
-    return AppConfig(dev_mode=True, hostname="localhost", port=8000)
-
-
-@pytest.fixture
 def pool() -> AsyncMock:
     return AsyncMock()
 
 
-def _mock_app(config: AppConfig, pool: AsyncMock):
+def _mock_app(config, pool):
     """Create a FastAPI app with mocked lifespan (no real DB)."""
     app = create_app(config)
     app.state.db_pool = pool
@@ -596,3 +590,57 @@ async def test_send_interactions_all_three_types(mock_fire, config, pool):
 
     assert resp.status_code == 200
     assert mock_fire.call_count == 3
+
+
+@pytest.mark.asyncio
+@patch(f"{_PROC}.fire_analytics_event")
+async def test_send_interactions_missing_key(mock_fire, config, pool):
+    """Body without 'interactions' key should return 400."""
+    app = _mock_app(config, pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/xrpc/science.alt.dataset.sendInteractions",
+            json={"data": []},
+        )
+
+    assert resp.status_code == 400
+    assert "interactions must be an array" in resp.json()["detail"]
+    mock_fire.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch(f"{_PROC}.fire_analytics_event")
+async def test_send_interactions_non_dict_item(mock_fire, config, pool):
+    """Non-object items in the interactions array should return 400."""
+    app = _mock_app(config, pool)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/xrpc/science.alt.dataset.sendInteractions",
+            json={"interactions": ["not-a-dict"]},
+        )
+
+    assert resp.status_code == 400
+    assert "must be an object" in resp.json()["detail"]
+    mock_fire.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch(f"{_PROC}.fire_analytics_event")
+async def test_send_interactions_boundary_at_max(mock_fire, config, pool):
+    """Exactly 100 interactions (the maximum) should succeed."""
+    app = _mock_app(config, pool)
+    transport = ASGITransport(app=app)
+    interactions = [
+        {"type": "download", "datasetUri": "at://did:plc:abc/science.alt.dataset.entry/3xyz"}
+        for _ in range(100)
+    ]
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/xrpc/science.alt.dataset.sendInteractions",
+            json={"interactions": interactions},
+        )
+
+    assert resp.status_code == 200
+    assert mock_fire.call_count == 100

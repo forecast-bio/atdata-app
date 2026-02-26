@@ -544,13 +544,17 @@ async def query_search_lenses(
         )
 
 
+async def _fetch_record_counts(conn: asyncpg.Connection) -> dict[str, int]:
+    counts = {}
+    for collection, table in COLLECTION_TABLE_MAP.items():
+        row = await conn.fetchrow(f"SELECT COUNT(*) as cnt FROM {table}")  # noqa: S608
+        counts[collection] = row["cnt"]
+    return counts
+
+
 async def query_record_counts(pool: asyncpg.Pool) -> dict[str, int]:
     async with pool.acquire() as conn:
-        counts = {}
-        for collection, table in COLLECTION_TABLE_MAP.items():
-            row = await conn.fetchrow(f"SELECT COUNT(*) as cnt FROM {table}")  # noqa: S608
-            counts[collection] = row["cnt"]
-        return counts
+        return await _fetch_record_counts(conn)
 
 
 async def query_labels_for_dataset(
@@ -692,11 +696,7 @@ async def query_analytics_summary(
             {"term": r["term"], "count": r["count"]} for r in term_rows
         ]
 
-        # Record counts
-        counts = {}
-        for collection, table in COLLECTION_TABLE_MAP.items():
-            c = await conn.fetchrow(f"SELECT COUNT(*) AS cnt FROM {table}")  # noqa: S608
-            counts[collection] = c["cnt"]
+        counts = await _fetch_record_counts(conn)
 
         return {
             "totalViews": total_views,
